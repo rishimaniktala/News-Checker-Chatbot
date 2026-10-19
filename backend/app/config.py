@@ -6,6 +6,22 @@ env vars so the eval runner can flip them without code edits.
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
+
+
+def load_env_file(path: Path) -> None:
+    """Copy KEY=value lines from a .env file into os.environ without overriding real env vars."""
+    if not path.is_file():
+        return
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
+
+
+load_env_file(Path(__file__).resolve().parents[2] / ".env")
 
 
 def _flag(name: str, default: bool) -> bool:
