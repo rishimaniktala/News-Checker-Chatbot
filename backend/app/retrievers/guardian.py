@@ -5,7 +5,7 @@ import re
 
 import httpx
 
-from ..resilience import CircuitOpen, call_with_retry
+from ..resilience import CircuitOpen, call_with_retry, raise_for_status_clean
 
 URL = "https://content.guardianapis.com/search"
 MAX_PASSAGE = 600
@@ -50,7 +50,7 @@ def search(query: str, unavailable: list[str], client: httpx.Client | None = Non
 
     def fetch():
         resp = (client or httpx).get(URL, params=params, timeout=TIMEOUT)
-        resp.raise_for_status()
+        raise_for_status_clean(resp, "guardian")
         return resp.json()
 
     try:

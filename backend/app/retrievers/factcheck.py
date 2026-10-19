@@ -4,7 +4,7 @@ import os
 
 import httpx
 
-from ..resilience import CircuitOpen, call_with_retry
+from ..resilience import CircuitOpen, call_with_retry, raise_for_status_clean
 
 URL = "https://factchecktools.googleapis.com/v1alpha1/claims:search"
 TIMEOUT = 8.0
@@ -16,11 +16,12 @@ def search(query: str, unavailable: list[str], client: httpx.Client | None = Non
     if not key:
         unavailable.append("factcheck: no API key")
         return []
-    params = {"query": query, "key": key, "pageSize": 8, "languageCode": "en"}
+    params = {"query": query, "pageSize": 8, "languageCode": "en"}
+    headers = {"X-Goog-Api-Key": key}
 
     def fetch():
-        resp = (client or httpx).get(URL, params=params, timeout=TIMEOUT)
-        resp.raise_for_status()
+        resp = (client or httpx).get(URL, params=params, headers=headers, timeout=TIMEOUT)
+        raise_for_status_clean(resp, "factcheck")
         return resp.json()
 
     try:

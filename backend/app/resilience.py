@@ -66,3 +66,11 @@ def call_with_retry(
             _breakers.pop(api, None)
             return result
     raise AssertionError("unreachable")
+
+
+def raise_for_status_clean(resp, api: str) -> None:
+    """Like resp.raise_for_status() but the message never carries the request URL, which may hold an API key."""
+    import httpx
+
+    if resp.is_error:
+        raise httpx.HTTPStatusError(f"{api} returned HTTP {resp.status_code}", request=resp.request, response=resp)

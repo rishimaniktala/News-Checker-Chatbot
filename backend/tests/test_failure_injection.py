@@ -315,7 +315,6 @@ def test_generic_exception_mid_run_is_not_retried_and_claim_is_unverifiable(run)
     assert any(e["type"] == "trace" and e["status"] == "failed" for e in events)
 
 
-@pytest.mark.xfail(strict=True, reason="BUG-orch-1: orchestrator.py:176 puts str(exception) into a trace event, which can carry keys or upstream detail")
 def test_exception_text_with_a_key_does_not_reach_the_stream(run):
     leaky = RuntimeError("request failed: https://x.test/?api-key=AIzaSyFAKEFAKEFAKEFAKEFAKEFAKE12345")
     events = run(default_gemini(verdict=raiser(leaky)))

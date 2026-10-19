@@ -23,7 +23,7 @@ from typing import Callable
 
 from .agents import EvidenceDecision, check_evidence, extract_claims, give_verdict
 from .budget import RunBudget
-from .config import Settings
+from .config import Settings, log_failure, redact
 from .rules import (
     MAX_ATTEMPTS,
     apply_rating_normalization,
@@ -178,8 +178,8 @@ def check_input(inp: NormalizedInput, search_fn: SearchFn, settings: Settings, b
         try:
             reports.append(check_claim(claim, search_fn, settings, budget, emit, run_id, inp.source_url))
         except Exception as e:
-            log.exception("claim %s failed", claim.id)
-            t(Step.VERDICT, StepStatus.FAILED, claim.id, f"{type(e).__name__}: {e}")
+            log_failure(log, f"claim {claim.id} failed")
+            t(Step.VERDICT, StepStatus.FAILED, claim.id, redact(f"{type(e).__name__}: {e}")[:300])
             reports.append(_unverifiable_report(
                 claim, "A step failed while checking this claim.", None,
                 answer="I couldn't check this claim because something went wrong on my side."))

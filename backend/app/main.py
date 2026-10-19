@@ -18,7 +18,7 @@ from fastapi.responses import StreamingResponse
 
 from . import store
 from .budget import RunBudget
-from .config import load_settings
+from .config import load_settings, log_failure
 from .retrievers.search import make_search_fn
 from .run import RunInputError, run_check
 
@@ -71,7 +71,7 @@ def _work(req: dict, run_id: str, q: queue.Queue, stop: threading.Event) -> None
         report = None
         emit({"type": "error", "message": e.message, "code": e.code})
     except Exception:
-        log.exception("run %s failed", run_id)
+        log_failure(log, f"run {run_id} failed")
         report = None
         emit({"type": "error", "message": INTERNAL_MESSAGE, "code": "internal"})
 
@@ -83,7 +83,7 @@ def _work(req: dict, run_id: str, q: queue.Queue, stop: threading.Event) -> None
         store.save_run(run_id, req, events, report.model_dump(mode="json") if report else None,
                        budget.cost_usd, latency_ms)
     except Exception:
-        log.exception("could not save run %s", run_id)
+        log_failure(log, f"could not save run {run_id}")
     q.put(done)
 
 

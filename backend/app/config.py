@@ -4,7 +4,10 @@ The experiment switches (validator, sources, iterations, cost cap, model) are
 env vars so the eval runner can flip them without code edits.
 """
 
+import logging
 import os
+import re
+import traceback
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -46,3 +49,26 @@ def load_settings() -> Settings:
         max_iterations=max(1, min(3, int(os.environ.get("MAX_ITERATIONS", "3")))),
         max_cost_usd_per_run=float(os.environ.get("MAX_COST_USD_PER_RUN", "0.05")),
     )
+
+
+_KEY_PATTERN = re.compile(r"(?i)\b(api-key|key)=[^&\s\"']+|AIza[0-9A-Za-z_-]{20,}")
+_SECRET_VARS = ("GEMINI_API_KEY", "GUARDIAN_API_KEY", "FACTCHECK_API_KEY", "FIRECRAWL_API_KEY")
+
+
+def redact(text: str) -> str:
+    """Replace configured API keys, key-like tokens and api-key query values with [redacted]."""
+    text = _KEY_PATTERN.sub("[redacted]", text)
+    for name in _SECRET_VARS:
+        value = os.environ.get(name)
+        if value:
+            text = text.replace(value, "[redacted]")
+    return text
+
+
+def log_failure(log: logging.Logger, what: str) -> None:
+    """Log the current exception with its traceback, keys redacted. Call inside an except block."""
+    log.error("%s\n%s", what, redact(traceback.format_exc()))
+
+
+# httpx logs full request URLs at INFO, and Guardian takes its key in the query string.
+logging.getLogger("httpx").setLevel(logging.WARNING)
