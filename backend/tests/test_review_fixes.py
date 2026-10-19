@@ -95,3 +95,39 @@ def test_match_score_shown_to_the_model_may_be_quoted():
     ev.factchecks = [FactCheckReview(id="F1", publisher="P", url="https://x/y", claim_reviewed="c",
                                      raw_rating="False", match_score=0.45)]
     assert check_rationale(_verdict("The fact-check matched with score 0.45 and 4.2% was the rate."), ev) == []
+
+
+def test_quote_may_copy_the_prompt_line_with_its_label():
+    from app.rules import validate_verdict
+    from app.schemas import FactCheckReview
+
+    ev = _evidence()
+    ev.factchecks = [FactCheckReview(id="F1", publisher="P", url="https://x/y", claim_reviewed="Moon wall claim",
+                                     raw_rating="False", match_score=0.9)]
+    for eid, quote in (("F1", "claim reviewed: Moon wall claim"), ("F1", "rating: False"), ("E1", "Jobs")):
+        v = _verdict("r")
+        v.citations = [Citation(evidence_id=eid, quote=quote, stance=Stance.REFUTES)]
+        assert validate_verdict(v, ev, 1).passed, quote
+
+
+def test_fact_check_the_evidence_check_did_not_mark_relevant_never_reaches_the_verdict(monkeypatch):
+    from app import orchestrator
+    from app.agents import EvidenceCheck, EvidenceDecision
+    from app.schemas import FactCheckReview
+    from test_orchestrator import SETTINGS, good_verdict, make_budget, make_claim, search
+
+    def search_with_unrelated_factcheck(claim, queries, n):
+        ev = search(claim, queries, n)
+        ev.factchecks = [FactCheckReview(id="F1", publisher="P", url="https://x/y", claim_reviewed="Musk bought Google",
+                                         raw_rating="False", match_score=0.9)]
+        return ev
+
+    seen = []
+    monkeypatch.setattr(orchestrator, "check_evidence", lambda c, ev, tried: EvidenceCheck(
+        claim_id=c.id, decision=EvidenceDecision.SUFFICIENT, relevant_ids=["E1"], reason="ok"))
+    monkeypatch.setattr(orchestrator, "give_verdict",
+                        lambda c, ev, previous_failure=None: seen.append(list(ev.factchecks)) or good_verdict(c))
+    report = orchestrator.check_claim(make_claim(), search_with_unrelated_factcheck, SETTINGS, make_budget(),
+                                      lambda e: None, "r1")
+    assert seen == [[]]
+    assert report.consensus.factcheck_label is None

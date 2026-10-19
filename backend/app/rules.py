@@ -52,13 +52,15 @@ def _norm(text: str) -> str:
 def _quotable_texts(evidence: RankedEvidence) -> dict[str, tuple[str, list[str]]]:
     """evidence_id -> (url, texts a quote may come from).
 
-    Guardian: the passage. Fact-check: claim_reviewed or raw_rating,
-    matching what the Verdict prompt allows."""
+    Guardian: the passage or the title. Fact-check: claim_reviewed or raw_rating.
+    The prompt prints these as "title: ...", "claim reviewed: ..." and "rating: ...",
+    and models often copy the whole line, so the prefixed form is accepted too."""
     out: dict[str, tuple[str, list[str]]] = {}
     for e in evidence.guardian:
-        out[e.id] = (e.url, [_norm(e.passage)])
+        out[e.id] = (e.url, [_norm(e.passage), _norm(e.title), _norm(f"title: {e.title}")])
     for f in evidence.factchecks:
-        out[f.id] = (f.url, [_norm(f.claim_reviewed), _norm(f.raw_rating)])
+        out[f.id] = (f.url, [_norm(f.claim_reviewed), _norm(f.raw_rating),
+                            _norm(f"claim reviewed: {f.claim_reviewed}"), _norm(f"rating: {f.raw_rating}")])
     return out
 
 

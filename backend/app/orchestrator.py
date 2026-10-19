@@ -105,6 +105,8 @@ def check_claim(claim: Claim, search_fn: SearchFn, settings: Settings, budget: R
             f"{len(evidence.guardian)} articles, {len(evidence.factchecks)} fact-checks"))
 
         check = check_evidence(claim, evidence, tried)
+        relevant = set(check.relevant_ids)
+        evidence.factchecks = [f for f in evidence.factchecks if f.id in relevant]
         sufficient = check.decision == EvidenceDecision.SUFFICIENT
         will_retry = not sufficient and bool(check.new_search_queries) and round_no < rounds
         t(Step.RETRIEVE, StepStatus.RETRY if will_retry else StepStatus.COMPLETED,

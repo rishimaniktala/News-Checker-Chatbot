@@ -215,9 +215,9 @@ def test_true_without_any_citation_cannot_be_built():
 
 
 def test_quote_from_wrong_field_is_rejected(monkeypatch):
-    ev = evidence(title="Sweden bans cash")
+    ev = evidence()
     bad = ClaimVerdict(claim_id="c1", label=VerdictLabel.TRUE, confidence=0.9, answer="Yes.", reasoning="r",
-                       citations=cite("Sweden bans cash"))
+                       citations=cite(ev.guardian[0].url))
     assert run_claim(monkeypatch, ev, bad).label == VerdictLabel.UNVERIFIABLE
 
 
