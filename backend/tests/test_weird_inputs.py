@@ -95,7 +95,6 @@ def test_rejected_input_never_reaches_the_model(case, drive):
     assert case["id"] == "image_text_free" or sum(gemini.calls.values()) == 0
 
 
-@pytest.mark.xfail(strict=True, reason="BUG-input-1: run.py:32,41,43 call string methods on non-string fields, so bad client input is reported as code 'internal' instead of 'bad_input'")
 @pytest.mark.parametrize("case", [c for c in CASES if c.get("bug")], ids=lambda c: c["id"])
 def test_non_string_fields_are_bad_input_not_internal(case, drive):
     _, events = drive(case)

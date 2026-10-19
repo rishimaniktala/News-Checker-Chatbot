@@ -132,7 +132,6 @@ def test_backslash_with_userinfo_blocked(url):
     blocked(url)
 
 
-@pytest.mark.xfail(strict=True, reason="SEC-1: backslash in host reaches the fetcher; WHATWG parsers read it as '/' so host becomes 127.0.0.1")
 def test_backslash_never_reaches_the_fetcher():
     try:
         out = check_url("http://127.0.0.1\\.example.com/", resolver=PUBLIC)
@@ -145,7 +144,6 @@ def test_6to4_loopback_blocked():
     blocked("http://[2002:7f00:1::]")
 
 
-@pytest.mark.xfail(strict=True, reason="SEC-2: NAT64 and IPv4-compatible forms embed private IPv4 but ipaddress calls them global")
 @pytest.mark.parametrize("url", ["http://[64:ff9b::7f00:1]", "http://[64:ff9b::a00:1]", "http://[::127.0.0.1]"])
 def test_embedded_ipv4_transition_forms_blocked(url):
     blocked(url)
@@ -215,7 +213,6 @@ def test_wrong_typed_fields_end_in_a_clean_error(api, body):
     assert events[-1]["type"] == "done"
 
 
-@pytest.mark.xfail(strict=True, reason="SEC-11: no request-size limit at the HTTP layer; main.py:~85 parses any body size before run.py truncates")
 def test_oversized_body_rejected_before_parsing(api, monkeypatch):
     monkeypatch.setattr(orchestrator, "extract_claims", lambda inp: (_ for _ in ()).throw(RuntimeError("stop")))
     r = api.post("/api/check", content=json.dumps({"kind": "text", "text": "a" * 12_000_000}),

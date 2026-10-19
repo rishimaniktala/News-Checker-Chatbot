@@ -127,6 +127,14 @@ def _numbers(text: str) -> set[Decimal]:
     return out
 
 
+_INSTRUCTION_LIKE = re.compile(
+    r"(ignore|disregard|forget)\s+(all\s+|any\s+)?(the\s+)?(previous|prior|above|earlier)\s+(instructions|prompts?)"
+    r"|\b(say|answer|respond|output|return|label)\b[^.\n]{0,40}\b(true|false|supported|contradicted)\b"
+    r"|\bsystem\s*:|\byou\s+(must|are\s+now)\b",
+    re.IGNORECASE,
+)
+
+
 def check_rationale(verdict: ClaimVerdict, evidence: RankedEvidence) -> list[str]:
     """Problems with the verdict's answer and reasoning text; empty list means fine.
 
@@ -151,6 +159,10 @@ def check_rationale(verdict: ClaimVerdict, evidence: RankedEvidence) -> list[str
     for u in dict.fromkeys(_urls(prose)):
         if u.rstrip("/") not in urls:
             problems.append(f"url {u} was not one of the retrieved sources")
+
+    for c in verdict.citations:
+        if _INSTRUCTION_LIKE.search(c.quote):
+            problems.append(f"quote from {c.evidence_id} reads like an instruction, not evidence")
 
     if verdict.label != VerdictLabel.UNVERIFIABLE and not any(c.quote.strip() for c in verdict.citations):
         problems.append("non-UNVERIFIABLE verdict has no citation with a quote")

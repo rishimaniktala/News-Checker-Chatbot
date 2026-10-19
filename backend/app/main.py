@@ -14,7 +14,7 @@ import uuid
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from . import store
 from .budget import RunBudget
@@ -27,6 +27,17 @@ log = logging.getLogger(__name__)
 app = FastAPI(title="News checker")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:3000"],
                    allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
+
+MAX_BODY_BYTES = 8_000_000  # 5 MB image as base64 plus headroom
+
+
+@app.middleware("http")
+async def limit_body(request, call_next):
+    # ponytail: trusts Content-Length; a chunked upload without one is not capped
+    if int(request.headers.get("content-length") or 0) > MAX_BODY_BYTES:
+        return JSONResponse({"detail": "Request too large."}, status_code=413)
+    return await call_next(request)
+
 
 INTERNAL_MESSAGE = "Something went wrong on our side. Please try again."
 

@@ -82,6 +82,7 @@ def check_claim(claim: Claim, search_fn: SearchFn, settings: Settings, budget: R
     tried: list[str] = []
     evidence: RankedEvidence | None = None
     sufficient = False
+    reported: set[str] = set()
 
     for round_no in range(1, rounds + 1):
         if budget.exhausted:
@@ -94,6 +95,10 @@ def check_claim(claim: Claim, search_fn: SearchFn, settings: Settings, budget: R
         tried += queries
         t(Step.RETRIEVE, StepStatus.STARTED, payload={"round": round_no, "queries": queries})
         evidence = search_fn(claim, queries, round_no)
+        for note in getattr(search_fn, "unavailable", []):
+            if note not in reported:
+                reported.add(note)
+                t(Step.RETRIEVE, StepStatus.COMPLETED, message=f"Source problem: {note}.")
         evidence.guardian = [e for e in evidence.guardian if e.url != source_url]
         apply_rating_normalization(evidence)
         t(Step.RETRIEVE, StepStatus.COMPLETED, message=(

@@ -221,7 +221,6 @@ def test_quote_from_wrong_field_is_rejected(monkeypatch):
     assert run_claim(monkeypatch, ev, bad).label == VerdictLabel.UNVERIFIABLE
 
 
-@pytest.mark.xfail(strict=True, reason="SEC-7: a verbatim quote of the injected sentence itself passes the validator, so planted text can still carry a TRUE verdict")
 def test_citing_the_injected_instruction_does_not_yield_true(monkeypatch):
     ev = evidence(passage=f"Weather was mild. {BAD}.")
     bad = ClaimVerdict(claim_id="c1", label=VerdictLabel.TRUE, confidence=0.99, answer="Yes.", reasoning="r",

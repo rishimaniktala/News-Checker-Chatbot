@@ -13,3 +13,18 @@
 {"id": "BUG-search-2", "severity": "medium", "found_by": "qa", "where": "backend/app/main.py:66", "summary": "search_fn.unavailable never reaches trace", "status": "open", "fix_commit": "", "test": "backend/tests/test_failure_injection.py", "run": "2026-10-19-demo-build"}
 {"id": "BUG-orch-1", "severity": "medium", "found_by": "qa", "where": "backend/app/orchestrator.py:182", "summary": "raw exception text streamed", "status": "open", "fix_commit": "", "test": "backend/tests/test_failure_injection.py", "run": "2026-10-19-demo-build"}
 {"id": "BUG-input-1", "severity": "low", "found_by": "qa", "where": "backend/app/run.py:32", "summary": "non-string input reported as internal not bad_input", "status": "open", "fix_commit": "", "test": "backend/tests/test_weird_inputs.py", "run": "2026-10-19-demo-build"}
+{"id": "SEC-1", "status": "verified", "fix_commit": "see git log", "run": "2026-10-19-demo-build"}
+{"id": "SEC-2", "status": "verified", "fix_commit": "see git log", "run": "2026-10-19-demo-build"}
+{"id": "SEC-3", "status": "verified", "fix_commit": "see git log", "run": "2026-10-19-demo-build"}
+{"id": "SEC-4", "status": "verified", "fix_commit": "see git log", "run": "2026-10-19-demo-build"}
+{"id": "SEC-5", "status": "verified", "fix_commit": "see git log", "run": "2026-10-19-demo-build"}
+{"id": "SEC-6", "status": "verified", "fix_commit": "see git log", "run": "2026-10-19-demo-build"}
+{"id": "SEC-7", "status": "verified", "fix_commit": "see git log", "run": "2026-10-19-demo-build"}
+{"id": "SEC-8", "status": "verified", "fix_commit": "see git log", "run": "2026-10-19-demo-build"}
+{"id": "SEC-9", "status": "verified", "fix_commit": "see git log", "run": "2026-10-19-demo-build"}
+{"id": "SEC-10", "status": "verified", "fix_commit": "see git log", "run": "2026-10-19-demo-build"}
+{"id": "SEC-11", "status": "verified", "fix_commit": "see git log", "run": "2026-10-19-demo-build"}
+{"id": "BUG-search-1", "status": "verified", "fix_commit": "see git log", "run": "2026-10-19-demo-build"}
+{"id": "BUG-search-2", "status": "verified", "fix_commit": "see git log", "run": "2026-10-19-demo-build"}
+{"id": "BUG-orch-1", "status": "verified", "fix_commit": "see git log", "run": "2026-10-19-demo-build"}
+{"id": "BUG-input-1", "status": "verified", "fix_commit": "see git log", "run": "2026-10-19-demo-build"}

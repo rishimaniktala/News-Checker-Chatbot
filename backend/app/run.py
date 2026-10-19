@@ -27,6 +27,8 @@ def _normalize(req: dict, emit: Callable[[dict], None], run_id: str) -> Normaliz
     from . import inputs
 
     kind = req.get("kind")
+    if any(not isinstance(req.get(f), (str, type(None))) for f in ("text", "url", "image_b64", "mime")):
+        raise RunInputError("bad_input", "That request wasn't in the format I expected.")
     try:
         if kind == "text":
             text = (req.get("text") or "").strip()

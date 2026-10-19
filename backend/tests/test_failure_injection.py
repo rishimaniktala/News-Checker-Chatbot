@@ -226,7 +226,6 @@ def test_guardian_401_is_not_retried(run, sleeps):
     assert sleeps == []
 
 
-@pytest.mark.xfail(strict=True, reason="BUG-search-2: search_fn.unavailable is never read, so the user is not told Guardian is down")
 def test_guardian_outage_is_named_in_the_stream(run):
     events = run(default_gemini(verify=fresh_queries()), Sources(guardian=503))
     assert "guardian" in visible_text(events)
@@ -244,7 +243,6 @@ def test_factcheck_429_retries_three_times_and_guardian_still_answers(run, sleep
     assert claim["confidence"] <= 0.70
 
 
-@pytest.mark.xfail(strict=True, reason="BUG-search-2: search_fn.unavailable is never read, so the user is not told Fact Check is down")
 def test_factcheck_outage_is_named_in_the_stream(run):
     events = run(default_gemini(), Sources(factcheck=429))
     assert "fact check" in visible_text(events) or "factcheck" in visible_text(events)

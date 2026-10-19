@@ -46,16 +46,21 @@ def _legacy_ipv4(host: str) -> str | None:
     return str(ipaddress.IPv4Address(value))
 
 
+_NAT64 = ipaddress.ip_network("64:ff9b::/96")
+_V4_COMPAT = ipaddress.ip_network("::/96")
+
+
 def _is_public(addr: str) -> bool:
     ip = ipaddress.ip_address(addr.split("%")[0])
     if isinstance(ip, ipaddress.IPv6Address):
-        ip = ip.ipv4_mapped or ip
+        embedded = ip.packed[-4:] if ip in _NAT64 or ip in _V4_COMPAT else None
+        ip = ip.ipv4_mapped or (ipaddress.IPv4Address(embedded) if embedded else ip)
     return ip.is_global and not ip.is_multicast
 
 
 def check_url(url: str, resolver: Callable[[str], list[str]] = _resolve) -> str:
     url = (url or "").strip()
-    if not url or len(url) > MAX_URL_CHARS:
+    if not url or len(url) > MAX_URL_CHARS or "\\" in url or any(ord(c) < 32 for c in url):
         raise UnsafeUrl(BAD_LINK_MSG)
     try:
         parts = urlsplit(url)
