@@ -5,6 +5,7 @@ No LLM calls here. Everything is deterministic and unit-testable.
 
 import re
 import unicodedata
+from decimal import Decimal
 from typing import Callable, Optional
 
 from .schemas import (
@@ -102,10 +103,58 @@ def _fail(c: Citation, reason: CitationFailure) -> FailedCitation:
     return FailedCitation(evidence_id=c.evidence_id, quote=c.quote, reason=reason)
 
 
+_URL_RE = re.compile(r"https?://[^\s<>\"']+")
+_ID_RE = re.compile(r"\b[EF]\d+\b")
+_NUM_RE = re.compile(
+    r"(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)(?:\s*(thousand|million|billion|trillion)\b)?",
+    re.IGNORECASE,
+)
+_SCALE = {"thousand": 10**3, "million": 10**6, "billion": 10**9, "trillion": 10**12}
+
+
+def _urls(text: str) -> list[str]:
+    return [u.rstrip(".,;:)]}!?") for u in _URL_RE.findall(text)]
+
+
+def _numbers(text: str) -> set[Decimal]:
+    """Numeric values in text. '5%' and '5 percent' both give 5; '1,200' gives
+    1200; '2 million' gives 2000000. URLs and evidence ids like E1 are ignored."""
+    text = _ID_RE.sub(" ", _URL_RE.sub(" ", _norm(text)))
+    out = set()
+    for digits, scale in _NUM_RE.findall(text):
+        n = Decimal(digits.replace(",", ""))
+        out.add((n * _SCALE.get(scale.lower(), 1)).normalize())
+    return out
+
+
 def check_rationale(verdict: ClaimVerdict, evidence: RankedEvidence) -> list[str]:
     """Problems with the verdict's answer and reasoning text; empty list means fine.
-    Filled in by the AI engineer."""
-    return []
+
+    Flags numbers that appear in no evidence text and URLs that were not
+    retrieved. Words like 'five' are not checked."""
+    problems: list[str] = []
+    prose = f"{verdict.answer}\n{verdict.reasoning}"
+
+    texts = []
+    urls = set()
+    for e in evidence.guardian:
+        texts += [e.passage, e.title]
+        urls.add(e.url.rstrip("/"))
+    for f in evidence.factchecks:
+        texts += [f.claim_reviewed, f.raw_rating]
+        urls.add(f.url.rstrip("/"))
+    known = set().union(*(_numbers(t) for t in texts)) if texts else set()
+
+    for n in sorted(_numbers(prose)):
+        if n not in known:
+            problems.append(f"number {n:f} does not appear in any evidence text")
+    for u in dict.fromkeys(_urls(prose)):
+        if u.rstrip("/") not in urls:
+            problems.append(f"url {u} was not one of the retrieved sources")
+
+    if verdict.label != VerdictLabel.UNVERIFIABLE and not any(c.quote.strip() for c in verdict.citations):
+        problems.append("non-UNVERIFIABLE verdict has no citation with a quote")
+    return problems
 
 
 def should_retry(validation: ValidationResult) -> bool:
