@@ -86,3 +86,30 @@ def test_rerank_with_embed_fn():
 
     ps = [{"url": "u1", "title": "t", "passage": "Cats."}, {"url": "u2", "title": "t", "passage": "rates"}]
     assert rank_guardian(CLAIM.text, ps, embed)[0].url == "u2"
+
+
+def test_year_in_claim_narrows_guardian_to_that_period():
+    seen = []
+
+    def handler(req: httpx.Request):
+        seen.append(dict(req.url.params))
+        return httpx.Response(200, json=json.loads((FIX / "guardian_search.json").read_text()))
+
+    claim = CLAIM.model_copy(update={"text": "Sweden joined NATO in 2024"})
+    fn = make_search_fn(settings(("guardian",)), client=httpx.Client(transport=httpx.MockTransport(handler)))
+    fn(claim, ["Sweden NATO 2024"], 1)
+    assert seen[0]["from-date"] == "2024-01-01" and seen[0]["to-date"] == "2024-12-31"
+
+
+def test_empty_window_falls_back_to_unfiltered_search():
+    seen = []
+
+    def handler(req: httpx.Request):
+        seen.append("from-date" in req.url.params)
+        body = {"response": {"results": []}} if "from-date" in req.url.params else json.loads((FIX / "guardian_search.json").read_text())
+        return httpx.Response(200, json=body)
+
+    claim = CLAIM.model_copy(update={"text": "Rates held in 1999"})
+    fn = make_search_fn(settings(("guardian",)), client=httpx.Client(transport=httpx.MockTransport(handler)))
+    assert fn(claim, ["rates 1999"], 1).guardian
+    assert seen == [True, False]

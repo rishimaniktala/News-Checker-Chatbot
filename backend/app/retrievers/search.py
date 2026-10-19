@@ -2,6 +2,8 @@
 
 from typing import Callable
 
+import re
+
 import httpx
 
 from ..budget import RunBudget
@@ -29,10 +31,15 @@ def make_search_fn(
     def search_fn(claim: Claim, queries: list[str], round_no: int) -> RankedEvidence:
         passages: dict[tuple[str, str], dict] = {}
         reviews: dict[str, dict] = {}
+        year = re.search(r"\b(?:19|20)\d{2}\b", claim.text)
+        window = (f"{year[0]}-01-01", f"{year[0]}-12-31") if year else None
         for query in queries:
             notes: list[str] = []
             if "guardian" in settings.sources:
-                for p in guardian.search(query, notes, client):
+                found = guardian.search(query, notes, client, window) if window else []
+                if not found:
+                    found = guardian.search(query, notes, client)
+                for p in found:
                     passages.setdefault((p["url"], p["passage"]), p)
             if "factcheck" in settings.sources:
                 for r in factcheck.search(query, notes, client):

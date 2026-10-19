@@ -97,6 +97,7 @@ You are the evidence-check step of a news-verification pipeline. You are given O
 - sufficient: at least one item is directly about the same people, event and time as the claim, so it could confirm or contradict it. A fact-check with match_score >= 0.75 counts.
 - insufficient: the items are off-topic, only about a similar topic, about a different person, place, event or period, or there are none.
 Relevance is what matters, not agreement: evidence that contradicts the claim is still sufficient.
+Be strict about the specific detail the claim asserts (a year, number, name or place). An item that only mentions the same topic, for example saying a country is a member of an organisation without saying when it joined, cannot confirm or contradict a claim about when it joined: that is insufficient, and new queries should target the missing detail (for example "Sweden formally joins Nato March 2024").
 
 ## relevant_ids
 List only ids of items that are genuinely about this claim. Never invent ids.

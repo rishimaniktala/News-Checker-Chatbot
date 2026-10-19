@@ -48,8 +48,10 @@ def split_passages(text: str, limit: int = MAX_PASSAGE) -> list[str]:
     return passages
 
 
-def search(query: str, unavailable: list[str], client: httpx.Client | None = None) -> list[dict]:
-    """Return [{url, title, published_at, passage}]. [] plus a note on failure."""
+def search(query: str, unavailable: list[str], client: httpx.Client | None = None,
+           window: tuple[str, str] | None = None) -> list[dict]:
+    """Return [{url, title, published_at, passage}]. [] plus a note on failure.
+    window is (from-date, to-date) as YYYY-MM-DD, to focus on coverage from the claimed period."""
     key = os.environ.get("GUARDIAN_API_KEY")
     if not key:
         unavailable.append("guardian: no API key")
@@ -60,6 +62,8 @@ def search(query: str, unavailable: list[str], client: httpx.Client | None = Non
         "page-size": 8,
         "order-by": "relevance",
     }
+    if window:
+        params["from-date"], params["to-date"] = window
 
     def fetch():
         _wait_turn()
