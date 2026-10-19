@@ -84,7 +84,6 @@ def test_report_never_contains_the_api_keys(offline, monkeypatch):
     assert "fake-guardian-key-0001" not in blob and "fake-factcheck-key-0002" not in blob
 
 
-@pytest.mark.xfail(strict=True, reason="BUG-search-1: orchestrator.py:89 and search.py:36 both call budget.register_query, so with the budget main.py passes in, every query is seen as a repeat and no source is ever called")
 def test_search_fn_given_the_run_budget_still_retrieves(offline, monkeypatch):
     report, _ = run(monkeypatch, budget_for_search=True)
     assert report.claims[0].evidence.guardian

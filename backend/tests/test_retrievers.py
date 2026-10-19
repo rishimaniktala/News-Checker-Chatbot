@@ -67,13 +67,6 @@ def test_guardian_only_never_calls_factcheck():
     assert hits and all("guardian" in h for h in hits)
 
 
-def test_repeat_query_skipped_by_budget():
-    c, hits = client()
-    fn = make_search_fn(settings(("guardian",)), RunBudget(1, 3), client=c)
-    fn(CLAIM, ["Bank of England rates", "bank of england rates!"], 1)
-    assert len(hits) == 1
-
-
 def test_passages_never_exceed_limit():
     text = ("Word " * 300) + "\n" + "Short sentence. " * 100 + "\n" + "x" * 2000
     passages = split_passages(text)

@@ -15,7 +15,7 @@ SearchFn = Callable[[Claim, list[str], int], RankedEvidence]
 
 def make_search_fn(
     settings: Settings,
-    budget: RunBudget | None = None,
+    budget: RunBudget | None = None,  # unused: the orchestrator owns repeat-query blocking
     embed_fn: EmbedFn | None = None,
     client: httpx.Client | None = None,
 ) -> SearchFn:
@@ -30,8 +30,6 @@ def make_search_fn(
         passages: dict[tuple[str, str], dict] = {}
         reviews: dict[str, dict] = {}
         for query in queries:
-            if budget and not budget.register_query(query):
-                continue
             notes: list[str] = []
             if "guardian" in settings.sources:
                 for p in guardian.search(query, notes, client):
