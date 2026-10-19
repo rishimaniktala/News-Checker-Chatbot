@@ -96,6 +96,7 @@ test("confidence label bounds", () => {
 test("consensus text", () => {
   assert.equal(consensusText(0.67, 3), "2 of 3 cited sources agree");
   assert.equal(consensusText(0, 0), "No cited sources");
+  assert.equal(consensusText(0.5, 2, "MISLEADING"), "Cited sources are mixed");
 });
 
 test("image validation", () => {

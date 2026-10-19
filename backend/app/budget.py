@@ -1,6 +1,7 @@
 """Per-run cost and loop guard."""
 
 import re
+import time
 from dataclasses import dataclass, field
 
 # USD per 1M tokens (input, output). Unverified: check ai.google.dev/pricing.
@@ -19,7 +20,9 @@ class RunBudget:
     cost_usd: float = 0.0
     tokens_in: int = 0
     tokens_out: int = 0
+    max_seconds: float = 90.0
     queries_seen: set[str] = field(default_factory=set)
+    started: float = field(default_factory=time.monotonic)
 
     def add_usage(self, model: str, tokens_in: int, tokens_out: int) -> None:
         price_in, price_out = PRICES_PER_M.get(model, DEFAULT_PRICE_PER_M)
@@ -29,11 +32,11 @@ class RunBudget:
 
     @property
     def exhausted(self) -> bool:
-        return self.cost_usd >= self.max_cost_usd
+        return self.cost_usd >= self.max_cost_usd or time.monotonic() - self.started >= self.max_seconds
 
-    def register_query(self, query: str) -> bool:
-        """True if the normalized query is new; False if it was already used."""
-        key = " ".join(re.sub(r"[^\w\s]", " ", query.lower()).split())
+    def register_query(self, query: str, scope: str = "") -> bool:
+        """True if the normalized query is new for this scope (a claim id); False if already used."""
+        key = scope + "|" + " ".join(re.sub(r"[^\w\s]", " ", query.lower()).split())
         if key in self.queries_seen:
             return False
         self.queries_seen.add(key)

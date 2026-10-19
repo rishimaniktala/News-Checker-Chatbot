@@ -4,6 +4,7 @@ No LLM calls here. Everything is deterministic and unit-testable.
 """
 
 import re
+from datetime import date
 import unicodedata
 from decimal import Decimal
 from typing import Callable, Optional
@@ -135,11 +136,13 @@ _INSTRUCTION_LIKE = re.compile(
 )
 
 
-def check_rationale(verdict: ClaimVerdict, evidence: RankedEvidence) -> list[str]:
+def check_rationale(verdict: ClaimVerdict, evidence: RankedEvidence, claim_text: str = "") -> list[str]:
     """Problems with the verdict's answer and reasoning text; empty list means fine.
 
     Flags numbers that appear in no evidence text and URLs that were not
-    retrieved. Words like 'five' are not checked."""
+    retrieved. Numbers from the claim itself, publication years and the
+    current year are allowed, since a refutation has to name them.
+    Words like 'five' are not checked."""
     problems: list[str] = []
     prose = f"{verdict.answer}\n{verdict.reasoning}"
 
@@ -151,7 +154,9 @@ def check_rationale(verdict: ClaimVerdict, evidence: RankedEvidence) -> list[str
     for f in evidence.factchecks:
         texts += [f.claim_reviewed, f.raw_rating]
         urls.add(f.url.rstrip("/"))
-    known = set().union(*(_numbers(t) for t in texts)) if texts else set()
+    dates = [e.published_at for e in evidence.guardian] + [f.reviewed_at for f in evidence.factchecks]
+    texts += [claim_text, str(date.today().year)] + [str(d.year) for d in dates if d]
+    known = set().union(*(_numbers(t) for t in texts))
 
     for n in sorted(_numbers(prose)):
         if n not in known:

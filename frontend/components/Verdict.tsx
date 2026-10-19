@@ -66,10 +66,10 @@ function ClaimBlock({ claim }: { claim: ClaimReport }) {
       <p className="text-sm">{claim.answer}</p>
       <p className="text-sm text-slate-700">{claim.reasoning}</p>
       <div>
-        <p className="text-sm font-medium">{consensusText(c.agreement_ratio, claim.citations.length)}</p>
+        <p className="text-sm font-medium">{consensusText(c.agreement_ratio, claim.citations.length, claim.label)}</p>
         <div
           role="img"
-          aria-label={consensusText(c.agreement_ratio, claim.citations.length)}
+          aria-label={consensusText(c.agreement_ratio, claim.citations.length, claim.label)}
           className="mt-1 h-2 w-full overflow-hidden rounded bg-slate-200"
         >
           <div className="h-full bg-slate-700" style={{ width: `${Math.round(c.agreement_ratio * 100)}%` }} />

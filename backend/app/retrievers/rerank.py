@@ -25,8 +25,9 @@ def _cosine(a: list[float], b: list[float]) -> float:
     return max(0.0, min(1.0, sum(x * y for x, y in zip(a, b)) / (na * nb)))
 
 
-def score(claim: str, texts: list[str], embed_fn: EmbedFn | None = None) -> list[float]:
-    """Score each text 0..1 against the claim."""
+def score(claim: str, texts: list[str], embed_fn: EmbedFn | None = None, symmetric: bool = False) -> list[float]:
+    """Score each text 0..1 against the claim. symmetric=True uses Jaccard so a long text that merely
+    contains every claim word does not score 1.0."""
     if not texts:
         return []
     if embed_fn:
@@ -35,6 +36,8 @@ def score(claim: str, texts: list[str], embed_fn: EmbedFn | None = None) -> list
     want = _tokens(claim)
     if not want:
         return [0.0] * len(texts)
+    if symmetric:
+        return [len(want & got) / len(want | got) if (got := _tokens(t)) else 0.0 for t in texts]
     return [len(want & _tokens(t)) / len(want) for t in texts]
 
 
@@ -55,7 +58,7 @@ def rank_guardian(claim: str, passages: list[dict], embed_fn: EmbedFn | None = N
 
 
 def rank_factchecks(claim: str, reviews: list[dict], embed_fn: EmbedFn | None = None, k: int = 5) -> list[FactCheckReview]:
-    scores = score(claim, [r["claim_reviewed"] for r in reviews], embed_fn)
+    scores = score(claim, [r["claim_reviewed"] for r in reviews], embed_fn, symmetric=True)
     top = sorted(zip(scores, reviews), key=lambda sr: -sr[0])[:k]
     return [
         FactCheckReview(id=f"F{i}", match_score=s, normalized_label=normalize_rating(r["raw_rating"]), **r)

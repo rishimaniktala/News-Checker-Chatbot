@@ -88,7 +88,7 @@ def check_claim(claim: Claim, search_fn: SearchFn, settings: Settings, budget: R
         if budget.exhausted:
             t(Step.RETRIEVE, StepStatus.FAILED, message="Cost cap reached; stopping the search.")
             break
-        queries = [q for q in queries if budget.register_query(q)]
+        queries = [q for q in queries if budget.register_query(q, claim.id)]
         if not queries:
             t(Step.RETRIEVE, StepStatus.COMPLETED, message="No new queries to try; stopping the search.")
             break
@@ -134,7 +134,7 @@ def check_claim(claim: Claim, search_fn: SearchFn, settings: Settings, budget: R
             verdict = candidate
             break
         validation = validate_verdict(candidate, evidence, attempt)
-        issues = check_rationale(candidate, evidence) if validation.passed else []
+        issues = check_rationale(candidate, evidence, claim.text) if validation.passed else []
         passed = validation.passed and not issues
         if not passed:
             failure = validation.retry_hint or "Problems with your answer text:\n" + "\n".join(issues)

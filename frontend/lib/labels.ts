@@ -11,8 +11,9 @@ export const LABEL_TEXT: Record<Label, string> = {
   UNVERIFIABLE: "Not enough evidence",
 };
 
-export function consensusText(agreementRatio: number, cited: number): string {
+export function consensusText(agreementRatio: number, cited: number, label?: Label): string {
   if (cited === 0) return "No cited sources";
+  if (label === "MISLEADING") return "Cited sources are mixed";
   const n = Math.round(agreementRatio * cited);
   return `${n} of ${cited} cited sources agree`;
 }

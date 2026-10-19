@@ -110,7 +110,7 @@ def test_validator_attempts_capped_at_three_then_unverifiable(agents, monkeypatc
 
 def test_rationale_problems_count_as_failure_and_feed_retry_hint(agents, monkeypatch):
     hints = []
-    monkeypatch.setattr(orchestrator, "check_rationale", lambda v, ev: ["answer contradicts label"])
+    monkeypatch.setattr(orchestrator, "check_rationale", lambda v, ev, text="": ["answer contradicts label"])
     monkeypatch.setattr(orchestrator, "give_verdict", lambda c, ev, previous_failure=None: (
         hints.append(previous_failure), good_verdict(c))[1])
     report, _ = run_claim(agents)
@@ -129,7 +129,7 @@ def test_cost_cap_stops_the_loop(agents, monkeypatch):
 
 def test_repeated_query_is_blocked(agents, monkeypatch):
     budget = make_budget()
-    budget.register_query("Sweden cash ban!")
+    budget.register_query("Sweden cash ban!", "c1")
     report, events = run_claim(agents, budget=budget)
     assert agents["search"] == 0
     assert any("No new queries" in e["message"] for e in events)

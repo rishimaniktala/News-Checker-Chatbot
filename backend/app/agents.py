@@ -15,7 +15,7 @@ The orchestrator decides the order, the retrieval loop and the validator retries
 Setup:
     pip install -U google-genai pydantic
     $env:GEMINI_API_KEY="..."          (PowerShell)  /  export GEMINI_API_KEY=...  (macOS/Linux)
-    optional: GEMINI_MODEL (default gemini-3.6-flash)
+    optional: GEMINI_MODEL (default gemini-2.5-flash)
 """
 
 from __future__ import annotations
@@ -172,15 +172,29 @@ def _get_client() -> genai.Client:
     """Create the Gemini client on first use (reads GEMINI_API_KEY)."""
     global _client
     if _client is None:
-        _client = genai.Client()
+        _client = genai.Client(http_options=types.HttpOptions(timeout=CALL_TIMEOUT_MS))
     return _client
 
 
 _CONFIG_FIELDS = types.GenerateContentConfig.model_fields
-_use_thinking = "thinking_level" in types.ThinkingConfig.model_fields  # older SDKs lack it
+CALL_TIMEOUT_MS = 40_000
 
 
-def _build_config(system: str, schema: type[BaseModel]) -> types.GenerateContentConfig:
+def _thinking_config(model: str) -> types.ThinkingConfig | None:
+    """Gemini 2.5 takes a token budget, newer models a level. Unknown or older SDKs get none."""
+    if model.startswith("gemini-2.5"):
+        return types.ThinkingConfig(thinking_budget=512)
+    if "thinking_level" in types.ThinkingConfig.model_fields:
+        return types.ThinkingConfig(thinking_level="low")
+    return None
+
+
+def _billed_output_tokens(usage) -> int:
+    """Thinking tokens are billed as output but reported separately."""
+    return (usage.candidates_token_count or 0) + (getattr(usage, "thoughts_token_count", 0) or 0)
+
+
+def _build_config(system: str, schema: type[BaseModel], model: str) -> types.GenerateContentConfig:
     """Request settings: system prompt + JSON output in `schema`'s shape.
     Written to work across google-genai versions."""
     cfg: dict = {"system_instruction": system, "response_mime_type": "application/json"}
@@ -188,8 +202,8 @@ def _build_config(system: str, schema: type[BaseModel]) -> types.GenerateContent
         cfg["response_json_schema"] = schema.model_json_schema()
     else:  # older SDK versions
         cfg["response_schema"] = schema
-    if _use_thinking:
-        cfg["thinking_config"] = types.ThinkingConfig(thinking_level="low")
+    if thinking := _thinking_config(model):
+        cfg["thinking_config"] = thinking
     return types.GenerateContentConfig(**cfg)
 
 
@@ -199,27 +213,19 @@ def _call(system: str, contents, schema: type[T], attempts: int = 2) -> T:
     Retries once if the reply is malformed or breaks a schema rule (this
     includes the validators in schemas.py, e.g. a TRUE verdict with no citations).
     """
-    global _use_thinking
     last_error: Exception | None = None
     tries = 0
     while tries < attempts:
-        config = _build_config(system, schema)  # setup errors are raised, not retried
-        try:
-            model = load_settings().gemini_model
-            response = call_with_retry(
-                lambda: _get_client().models.generate_content(model=model, contents=contents, config=config),
-                api="gemini",
-            )
-        except genai_errors.ClientError as e:
-            # Older models (e.g. gemini-2.5-*) reject thinking_level: drop it and retry.
-            if _use_thinking and "thinking" in str(e).lower():
-                _use_thinking = False
-                continue
-            raise
+        model = load_settings().gemini_model
+        config = _build_config(system, schema, model)
+        response = call_with_retry(
+            lambda: _get_client().models.generate_content(model=model, contents=contents, config=config),
+            api="gemini",
+        )
         tries += 1
         sink, usage = _usage_sink.get(), getattr(response, "usage_metadata", None)
         if sink and usage:
-            sink(model, usage.prompt_token_count or 0, usage.candidates_token_count or 0)
+            sink(model, usage.prompt_token_count or 0, _billed_output_tokens(usage))
         try:
             return schema.model_validate_json(response.text or "")
         except ValidationError as e:

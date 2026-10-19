@@ -4,7 +4,7 @@ One line per decision or result: what, why, evidence.
 
 - 2026-10-19 Local-only, no deploy. Why: demo runs on a laptop; removes CORS and hosting risk. Evidence: PM decision.
 - 2026-10-19 Moved agents, rules, schemas and prompts into `backend/app` with relative imports. Why: package layout; no logic changes. Evidence: commit a753d69.
-- 2026-10-19 Orchestrator alone blocks repeated queries. Why: search_fn also registered them, so every query looked like a repeat and retrieval never ran. Evidence: BUG-search-1 found by QA, fixed in 7c-level commit "stop double-counting queries".
+- 2026-10-19 Orchestrator alone blocks repeated queries. Why: search_fn also registered them, so every query looked like a repeat and retrieval never ran. Evidence: BUG-search-1 found by QA, fixed in the commit "stop double-counting queries".
 - 2026-10-19 Rerank uses a lexical score by default, Gemini embeddings only if an `embed_fn` is passed. Why: one fewer API dependency and deterministic tests. Not yet measured against embeddings.
 - 2026-10-19 Delimiter neutralizing folds NFKC and matches closers case-insensitively with any spacing, replacing them with `[/tag]`. Why: SEC-3/4/5 showed `</EVIDENCE>` and fullwidth variants closed the data block. Evidence: tests in test_security_injection.py.
 - 2026-10-19 OCR context note is wrapped in its own untrusted `<context_note>` block. Why: it was placed outside the data tags (SEC-6).
@@ -16,3 +16,5 @@ One line per decision or result: what, why, evidence.
 
 ## Experiments
 None run yet. They need API keys: see `eval/configs.json` for the four configs.
+- 2026-10-19 Reviewer found seven must-fix issues; all fixed with tests in `test_review_fixes.py`: `check_rationale` now allows numbers from the claim, publication years and the current year (R1); fact-check match uses Jaccard when no embeddings (R2) so a long review containing every claim word no longer scores 1.0 and overrides the verdict; thinking tokens count toward cost (R3); thinking config chosen by model name, `thinking_budget=512` for 2.5 (R4); settings load inside the try so a bad env value still ends the stream (R5); repeat-query block is per claim (R6); a 90 s run deadline plus a 40 s Gemini call timeout (R7).
+- 2026-10-19 Known and left: low-severity dead code (unused `should_retry`, `reset_breakers` outside tests, duplicate size constants), `link_is_alive` is never passed so the LINK_DEAD check does not run, and cancelling a request stops the worker only at its next event.

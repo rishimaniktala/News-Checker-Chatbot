@@ -28,6 +28,7 @@ app = FastAPI(title="News checker")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:3000"],
                    allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
 
+STREAM_IDLE_SECONDS = 150  # no event for this long means the worker is stuck
 MAX_BODY_BYTES = 8_000_000  # 5 MB image as base64 plus headroom
 
 
@@ -62,8 +63,7 @@ def get_run(run_id: str) -> dict:
 def _work(req: dict, run_id: str, q: queue.Queue, stop: threading.Event) -> None:
     events: list[dict] = []
     started = time.monotonic()
-    settings = load_settings()
-    budget = RunBudget(settings.max_cost_usd_per_run, settings.max_iterations)
+    budget = RunBudget(0.05, 3)
 
     def emit(event: dict) -> None:
         if stop.is_set():
@@ -73,6 +73,8 @@ def _work(req: dict, run_id: str, q: queue.Queue, stop: threading.Event) -> None
 
     report = None
     try:
+        settings = load_settings()
+        budget.max_cost_usd, budget.max_iterations = settings.max_cost_usd_per_run, settings.max_iterations
         report = run_check({**req, "run_id": run_id}, emit, settings,
                            make_search_fn(settings, budget), budget)
         emit({"type": "verdict", "report": report.model_dump(mode="json")})
@@ -108,7 +110,11 @@ def check(req: dict) -> StreamingResponse:
     def stream():
         try:
             while True:
-                event = q.get()
+                try:
+                    event = q.get(timeout=STREAM_IDLE_SECONDS)
+                except queue.Empty:
+                    event = {"type": "done", "run_id": run_id, "cost_usd": 0, "latency_ms": 0,
+                             "tokens_in": 0, "tokens_out": 0, "cached": False}
                 yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
                 if event["type"] == "done":
                     return
