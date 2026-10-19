@@ -47,7 +47,7 @@ def sse(resp):
 
 def run_api(monkeypatch, search_client, extract=None):
     monkeypatch.setattr(main, "make_search_fn",
-                        lambda settings, budget: make_search_fn(settings, budget, client=search_client))
+                        lambda settings, budget, **kw: make_search_fn(settings, budget, client=search_client))
     monkeypatch.setattr(orchestrator, "extract_claims",
                         extract or (lambda inp: ClaimExtraction(claims=[make_claim()], notes="n")))
     resp = TestClient(main.app).post("/api/check", json={"kind": "text", "text": "hello"})

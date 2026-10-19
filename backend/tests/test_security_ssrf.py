@@ -161,7 +161,7 @@ from app import main, orchestrator, store  # noqa: E402
 @pytest.fixture
 def api(tmp_path, monkeypatch):
     monkeypatch.setenv("NEWS_DB", str(tmp_path / "h.db"))
-    monkeypatch.setattr(main, "make_search_fn", lambda settings, budget: None)
+    monkeypatch.setattr(main, "make_search_fn", lambda settings, budget, **kw: None)
     return TestClient(main.app)
 
 

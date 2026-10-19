@@ -31,8 +31,11 @@ def score(claim: str, texts: list[str], embed_fn: EmbedFn | None = None, symmetr
     if not texts:
         return []
     if embed_fn:
-        vectors = embed_fn([claim] + texts)
-        return [_cosine(vectors[0], v) for v in vectors[1:]]
+        try:
+            vectors = embed_fn([claim] + texts)
+            return [_cosine(vectors[0], v) for v in vectors[1:]]
+        except Exception:
+            pass  # embeddings are an upgrade, not a requirement: fall back to word overlap
     want = _tokens(claim)
     if not want:
         return [0.0] * len(texts)

@@ -155,6 +155,7 @@ def check_rationale(verdict: ClaimVerdict, evidence: RankedEvidence, claim_text:
         texts += [f.claim_reviewed, f.raw_rating]
         urls.add(f.url.rstrip("/"))
     dates = [e.published_at for e in evidence.guardian] + [f.reviewed_at for f in evidence.factchecks]
+    texts += [f"{f.match_score:.2f}" for f in evidence.factchecks]
     texts += [claim_text, str(date.today().year)] + [str(d.year) for d in dates if d]
     known = set().union(*(_numbers(t) for t in texts))
 

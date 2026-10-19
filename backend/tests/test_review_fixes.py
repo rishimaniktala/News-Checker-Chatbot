@@ -77,3 +77,21 @@ def test_health_reports_which_keys_exist_without_values(monkeypatch):
     body = TestClient(main.app).get("/health").json()
     assert body["keys_configured"]["gemini"] is True and body["keys_configured"]["guardian"] is False
     assert "SECRET-VALUE" not in str(body)
+
+
+def test_embedding_failure_falls_back_to_word_overlap():
+    from app.retrievers.rerank import score
+
+    def boom(texts):
+        raise RuntimeError("embedding service down")
+
+    assert score("bank rates held", ["the bank held rates", "cats"], embed_fn=boom)[0] > 0
+
+
+def test_match_score_shown_to_the_model_may_be_quoted():
+    from app.schemas import FactCheckReview
+
+    ev = _evidence()
+    ev.factchecks = [FactCheckReview(id="F1", publisher="P", url="https://x/y", claim_reviewed="c",
+                                     raw_rating="False", match_score=0.45)]
+    assert check_rationale(_verdict("The fact-check matched with score 0.45 and 4.2% was the rate."), ev) == []

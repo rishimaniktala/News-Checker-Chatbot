@@ -233,6 +233,16 @@ def _call(system: str, contents, schema: type[T], attempts: int = 2) -> T:
     raise AgentError(f"{schema.__name__}: model gave no valid output after {attempts} attempts: {last_error}")
 
 
+EMBED_MODEL = "gemini-embedding-001"
+
+
+def embed(texts: list[str]) -> list[list[float]]:
+    """Embedding vectors for reranking. Raises on failure; rerank falls back to lexical scoring."""
+    response = call_with_retry(
+        lambda: _get_client().models.embed_content(model=EMBED_MODEL, contents=texts), api="gemini")
+    return [e.values for e in response.embeddings]
+
+
 # --------------------------------------------------------------- the agents
 
 

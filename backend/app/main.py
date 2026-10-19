@@ -20,6 +20,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from . import store
 from .budget import RunBudget
 from .config import load_settings, log_failure
+from .agents import embed
 from .retrievers.search import make_search_fn
 from .run import RunInputError, run_check
 
@@ -79,7 +80,7 @@ def _work(req: dict, run_id: str, q: queue.Queue, stop: threading.Event) -> None
         settings = load_settings()
         budget.max_cost_usd, budget.max_iterations = settings.max_cost_usd_per_run, settings.max_iterations
         report = run_check({**req, "run_id": run_id}, emit, settings,
-                           make_search_fn(settings, budget), budget)
+                           make_search_fn(settings, budget, embed_fn=embed), budget)
         emit({"type": "verdict", "report": report.model_dump(mode="json")})
     except Cancelled:
         return

@@ -42,14 +42,13 @@ def search(query: str, unavailable: list[str], client: httpx.Client | None = Non
         return []
     params = {
         "q": query,
-        "api-key": key,
         "show-fields": "bodyText,headline",
         "page-size": 8,
         "order-by": "relevance",
     }
 
     def fetch():
-        resp = (client or httpx).get(URL, params=params, timeout=TIMEOUT)
+        resp = (client or httpx).get(URL, params=params, headers={"api-key": key}, timeout=TIMEOUT)
         raise_for_status_clean(resp, "guardian")
         return resp.json()
 
