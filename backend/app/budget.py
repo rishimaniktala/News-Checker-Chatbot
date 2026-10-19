@@ -1,6 +1,15 @@
-"""Per-run cost and loop guard. Filled in by the data engineer."""
+"""Per-run cost and loop guard."""
 
+import re
 from dataclasses import dataclass, field
+
+# USD per 1M tokens (input, output). Unverified: check ai.google.dev/pricing.
+PRICES_PER_M = {
+    "gemini-2.5-flash": (0.30, 2.50),
+    "gemini-2.5-flash-lite": (0.10, 0.40),
+    "gemini-2.5-pro": (1.25, 10.00),
+}
+DEFAULT_PRICE_PER_M = (1.25, 10.00)
 
 
 @dataclass
@@ -13,12 +22,19 @@ class RunBudget:
     queries_seen: set[str] = field(default_factory=set)
 
     def add_usage(self, model: str, tokens_in: int, tokens_out: int) -> None:
-        raise NotImplementedError
+        price_in, price_out = PRICES_PER_M.get(model, DEFAULT_PRICE_PER_M)
+        self.tokens_in += tokens_in
+        self.tokens_out += tokens_out
+        self.cost_usd += (tokens_in * price_in + tokens_out * price_out) / 1_000_000
 
     @property
     def exhausted(self) -> bool:
-        raise NotImplementedError
+        return self.cost_usd >= self.max_cost_usd
 
     def register_query(self, query: str) -> bool:
         """True if the normalized query is new; False if it was already used."""
-        raise NotImplementedError
+        key = " ".join(re.sub(r"[^\w\s]", " ", query.lower()).split())
+        if key in self.queries_seen:
+            return False
+        self.queries_seen.add(key)
+        return True
