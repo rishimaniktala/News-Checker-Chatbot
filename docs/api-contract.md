@@ -27,7 +27,7 @@ Rules:
 - A failed claim still yields a `verdict` with `UNVERIFIABLE` for that claim, plus a `trace` event with `status: failed`.
 
 ## GET /health
-`{"status": "ok"}`
+`{"status": "ok", "keys_configured": {"gemini": bool, ...}}` (booleans only, never values)
 
 ## GET /api/runs/{run_id}
 The stored run: input, every trace event, prompts, tool calls, tokens, cost, latency, validator results.

@@ -69,3 +69,11 @@ def test_r6_second_claim_may_reuse_a_query():
 def test_r7_run_deadline_exhausts_the_budget():
     b = RunBudget(1, 3, max_seconds=0.0)
     assert b.exhausted
+
+
+def test_health_reports_which_keys_exist_without_values(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "SECRET-VALUE")
+    monkeypatch.delenv("GUARDIAN_API_KEY", raising=False)
+    body = TestClient(main.app).get("/health").json()
+    assert body["keys_configured"]["gemini"] is True and body["keys_configured"]["guardian"] is False
+    assert "SECRET-VALUE" not in str(body)

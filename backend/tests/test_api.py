@@ -25,7 +25,7 @@ def fake_pipeline(monkeypatch, claims=()):
 
 
 def test_health(client):
-    assert client.get("/health").json() == {"status": "ok"}
+    assert client.get("/health").json()["status"] == "ok"
 
 
 def test_stream_order_trace_verdict_done(client, monkeypatch):

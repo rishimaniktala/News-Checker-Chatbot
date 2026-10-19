@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import queue
 import threading
 import time
@@ -49,7 +50,9 @@ class Cancelled(BaseException):
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok"}
+    keys = {n.removesuffix("_API_KEY").lower(): bool(os.environ.get(n)) for n in
+            ("GEMINI_API_KEY", "GUARDIAN_API_KEY", "FACTCHECK_API_KEY", "FIRECRAWL_API_KEY")}
+    return {"status": "ok", "keys_configured": keys}
 
 
 @app.get("/api/runs/{run_id}")
