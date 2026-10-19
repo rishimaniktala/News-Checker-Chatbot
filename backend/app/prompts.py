@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from schemas import Claim, NormalizedInput, RankedEvidence
+from .schemas import Claim, NormalizedInput, RankedEvidence
 
 # ------------------------------------------------------- CLAIM EXTRACTION
 

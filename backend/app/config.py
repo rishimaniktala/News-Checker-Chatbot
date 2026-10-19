@@ -1,0 +1,32 @@
+"""Runtime settings read from the environment.
+
+The experiment switches (validator, sources, iterations, cost cap, model) are
+env vars so the eval runner can flip them without code edits.
+"""
+
+import os
+from dataclasses import dataclass
+
+
+def _flag(name: str, default: bool) -> bool:
+    return os.environ.get(name, str(default)).strip().lower() in ("1", "true", "yes", "on")
+
+
+@dataclass(frozen=True)
+class Settings:
+    gemini_model: str
+    enable_validator: bool
+    sources: tuple[str, ...]
+    max_iterations: int
+    max_cost_usd_per_run: float
+
+
+def load_settings() -> Settings:
+    sources = tuple(s.strip() for s in os.environ.get("SOURCES", "guardian,factcheck").split(",") if s.strip())
+    return Settings(
+        gemini_model=os.environ.get("GEMINI_MODEL", "gemini-2.5-flash"),
+        enable_validator=_flag("ENABLE_VALIDATOR", True),
+        sources=sources or ("guardian",),
+        max_iterations=max(1, min(3, int(os.environ.get("MAX_ITERATIONS", "3")))),
+        max_cost_usd_per_run=float(os.environ.get("MAX_COST_USD_PER_RUN", "0.05")),
+    )

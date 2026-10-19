@@ -30,7 +30,7 @@ from google.genai import errors as genai_errors
 from google.genai import types
 from pydantic import BaseModel, Field, ValidationError
 
-from prompts import (
+from .prompts import (
     EXTRACTION_SYSTEM_PROMPT,
     OCR_SYSTEM_PROMPT,
     OCR_USER_PROMPT,
@@ -38,7 +38,7 @@ from prompts import (
     build_extraction_user_prompt,
     build_verdict_user_prompt,
 )
-from schemas import (
+from .schemas import (
     Claim,
     ClaimExtraction,
     ClaimVerdict,

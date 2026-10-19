@@ -20,8 +20,8 @@ from __future__ import annotations
 import uuid
 from typing import Callable
 
-from agents import EvidenceDecision, check_evidence, extract_claims, give_verdict
-from rules import (
+from .agents import EvidenceDecision, check_evidence, extract_claims, give_verdict
+from .rules import (
     MAX_ATTEMPTS,
     apply_rating_normalization,
     compute_consensus,
@@ -31,7 +31,7 @@ from rules import (
     unverifiable_result,
     validate_verdict,
 )
-from schemas import (
+from .schemas import (
     Claim,
     ClaimReport,
     FinalReport,
@@ -147,7 +147,7 @@ def check_input(inp: NormalizedInput, search_fn: SearchFn, trace: list | None = 
 if __name__ == "__main__":
     # Demo with a fake search function. Needs GEMINI_API_KEY.
     # Set OFF_TOPIC = True to watch the query-rewriting loop instead.
-    from schemas import EvidenceItem, InputType
+    from .schemas import EvidenceItem, InputType
 
     OFF_TOPIC = False
 

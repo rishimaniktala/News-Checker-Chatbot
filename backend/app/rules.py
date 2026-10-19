@@ -7,7 +7,7 @@ import re
 import unicodedata
 from typing import Callable, Optional
 
-from schemas import (
+from .schemas import (
     Citation,
     CitationFailure,
     ClaimReport,
