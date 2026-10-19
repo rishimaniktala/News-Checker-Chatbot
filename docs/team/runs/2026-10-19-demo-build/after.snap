@@ -1,0 +1,14 @@
+facdcb297c9377740919332fd679f3e0ba941acd  backend/tests/test_failure_injection.py
+8847fdd20e3adb13b70d89d135c22ca315089e26  backend/tests/test_integration_fixtures.py
+6bf52cc20602c4a15f6ffbfd0760cad774b6d7c6  backend/tests/test_loop_properties.py
+70a1f4ef6a410e03f2f2f11be663e7dffec01cfa  backend/tests/test_security_injection.py
+f0badfeadc9b9633ec404272f7cb809f8b9616c9  backend/tests/test_security_secrets.py
+8a470964b9247458b219d44713a1711d31736fa7  backend/tests/test_security_ssrf.py
+684df8a16db5cbf6e3f6979d5e42a8edc1f22896  backend/tests/test_weird_inputs.py
+036fb10e86bd7ad6dc8f0452d4baae01d215109c  backend/tests/weird_inputs.json
+4a8ecadc2e8426296f78f806746c274bfa9f8d6a  docs/team/bugs.jsonl
+da39a3ee5e6b4b0d3255bfef95601890afd80709  docs/team/runs/2026-10-19-demo-build/after.snap
+468fd5bbac017705419777b82f884e6b113c6dcc  docs/team/runs/2026-10-19-demo-build/audit.jsonl
+b30e5755fd1dc2f8f7bdcb887a043f4736bc984a  docs/team/runs/2026-10-19-demo-build/report-qa.md
+4f8b175f11fafbe21e9fb097ee4909c2fdb8cae6  docs/team/runs/2026-10-19-demo-build/report-security.md
+5ec4789692f7fa325f3c83427e98e934987d1bac  frontend/AGENTS.md

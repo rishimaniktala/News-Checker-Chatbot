@@ -3,3 +3,5 @@
 {"ts":"2026-10-19T16:07:57Z","run":"2026-10-19-demo-build","actor":"lead","event":"report_received","detail":"backend-data"}
 {"ts":"2026-10-19T16:08:13Z","run":"2026-10-19-demo-build","actor":"lead","event":"report_received","detail":"ai"}
 {"ts":"2026-10-19T16:09:43Z","run":"2026-10-19-demo-build","actor":"lead","event":"report_received","detail":"backend-api"}
+{"ts":"2026-10-19T16:11:44Z","run":"2026-10-19-demo-build","actor":"lead","event":"report_received","detail":"frontend"}
+{"ts":"2026-10-19T16:16:51Z","run":"2026-10-19-demo-build","actor":"lead","event":"scope_check","detail":"qa+security phase: exit 0, no violations"}
