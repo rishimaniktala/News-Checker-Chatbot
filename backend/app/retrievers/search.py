@@ -31,8 +31,8 @@ def make_search_fn(
     def search_fn(claim: Claim, queries: list[str], round_no: int) -> RankedEvidence:
         passages: dict[tuple[str, str], dict] = {}
         reviews: dict[str, dict] = {}
-        year = re.search(r"\b(?:19|20)\d{2}\b", claim.text)
-        window = (f"{year[0]}-01-01", f"{year[0]}-12-31") if year else None
+        year = (re.search(r"\b(?:19|20)\d{2}\b", claim.text) or [None])[0] or search_fn.year_hint
+        window = (f"{year}-01-01", f"{year}-12-31") if year else None
         for query in queries:
             notes: list[str] = []
             if "guardian" in settings.sources:
@@ -53,4 +53,5 @@ def make_search_fn(
         )
 
     search_fn.unavailable = unavailable
+    search_fn.year_hint = None  # set by the orchestrator for pasted articles whose URL carries a year
     return search_fn

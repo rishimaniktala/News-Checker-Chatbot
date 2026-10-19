@@ -18,6 +18,7 @@ whoever builds retrieval: search_fn(claim, queries, attempt) -> RankedEvidence.
 from __future__ import annotations
 
 import logging
+import re
 from functools import partial
 from typing import Callable
 
@@ -187,6 +188,10 @@ def check_input(inp: NormalizedInput, search_fn: SearchFn, settings: Settings, b
     skipped = [c for c in extraction.claims if not c.checkworthy]
     t(Step.EXTRACT, StepStatus.COMPLETED,
       message=f"{len(checkable)} claims to check, {len(skipped)} skipped")
+
+    url_year = re.search(r"/((?:19|20)\d{2})/", inp.source_url or "")
+    if url_year and hasattr(search_fn, "year_hint"):
+        search_fn.year_hint = url_year[1]
 
     reports = []
     for claim in checkable:

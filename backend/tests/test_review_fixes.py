@@ -163,3 +163,19 @@ def test_opinion_only_input_explains_why_nothing_was_checked(monkeypatch):
     report = orchestrator.check_input(NormalizedInput(input_type=InputType.TEXT, text="x"), None, SETTINGS,
                                       make_budget(), lambda e: None, "r1")
     assert report.claims == [] and "opinion" in report.answer and "can't be shown true or false" in report.answer
+
+
+def test_pasted_article_url_year_narrows_the_search(monkeypatch):
+    from app import orchestrator
+    from app.schemas import Claim, ClaimExtraction, InputType, NormalizedInput
+    from test_orchestrator import SETTINGS, make_budget
+
+    monkeypatch.setattr(orchestrator, "extract_claims", lambda inp: ClaimExtraction(claims=[]))
+
+    def fake_search(claim, queries, n):
+        raise AssertionError("no claims, never called")
+
+    fake_search.year_hint = None
+    inp = NormalizedInput(input_type=InputType.URL, text="t", source_url="https://www.theguardian.com/world/2024/mar/07/x")
+    orchestrator.check_input(inp, fake_search, SETTINGS, make_budget(), lambda e: None, "r1")
+    assert fake_search.year_hint == "2024"
