@@ -151,3 +151,15 @@ def test_todays_day_and_month_may_be_quoted():
 
     today = date.today()
     assert check_rationale(_verdict(f"As of {today.day} {today.month} the rate was 4.2%."), _evidence()) == []
+
+
+def test_opinion_only_input_explains_why_nothing_was_checked(monkeypatch):
+    from app import orchestrator
+    from app.schemas import Claim, ClaimExtraction, InputType, NormalizedInput
+    from test_orchestrator import SETTINGS, make_budget
+
+    opinion = Claim(id="c1", text="X is a dictator", checkworthy=False, skip_reason="opinion")
+    monkeypatch.setattr(orchestrator, "extract_claims", lambda inp: ClaimExtraction(claims=[opinion]))
+    report = orchestrator.check_input(NormalizedInput(input_type=InputType.TEXT, text="x"), None, SETTINGS,
+                                      make_budget(), lambda e: None, "r1")
+    assert report.claims == [] and "opinion" in report.answer and "can't be shown true or false" in report.answer

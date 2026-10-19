@@ -170,6 +170,14 @@ def check_claim(claim: Claim, search_fn: SearchFn, settings: Settings, budget: R
     )
 
 
+def _nothing_checkable_answer(skipped: list[Claim], notes: str | None) -> str:
+    reasons = sorted({c.skip_reason.strip().lower() for c in skipped if c.skip_reason})
+    if not reasons:
+        return notes or "Nothing in this input could be fact-checked."
+    return (f"I didn't fact-check this because it reads as {' / '.join(reasons)}, which can't be shown true or false. "
+            "Try a specific claim: an event, date, number or quote.")
+
+
 def check_input(inp: NormalizedInput, search_fn: SearchFn, settings: Settings, budget: RunBudget,
                 emit: Emit, run_id: str) -> FinalReport:
     t = partial(trace, emit, run_id)
@@ -191,8 +199,7 @@ def check_input(inp: NormalizedInput, search_fn: SearchFn, settings: Settings, b
                 claim, "A step failed while checking this claim.", None,
                 answer="I couldn't check this claim because something went wrong on my side."))
     overall, confidence = rollup_overall(reports)
-    answer = " ".join(r.answer for r in reports) or (
-        extraction.notes or "Nothing in this input could be fact-checked.")
+    answer = " ".join(r.answer for r in reports) or _nothing_checkable_answer(skipped, extraction.notes)
     return FinalReport(
         run_id=run_id,
         input=inp,
