@@ -1,0 +1,5 @@
+{"ts": "2026-10-19T16:03:02.403433Z", "run": "2026-10-19-demo-build", "actor": "lead", "event": "team_approved", "detail": "backend-api, backend-data, ai, frontend, dev"}
+{"ts":"2026-10-19T16:07:36Z","run":"2026-10-19-demo-build","actor":"lead","event":"report_received","detail":"dev"}
+{"ts":"2026-10-19T16:07:57Z","run":"2026-10-19-demo-build","actor":"lead","event":"report_received","detail":"backend-data"}
+{"ts":"2026-10-19T16:08:13Z","run":"2026-10-19-demo-build","actor":"lead","event":"report_received","detail":"ai"}
+{"ts":"2026-10-19T16:09:43Z","run":"2026-10-19-demo-build","actor":"lead","event":"report_received","detail":"backend-api"}
