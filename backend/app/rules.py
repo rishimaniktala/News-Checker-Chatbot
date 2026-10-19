@@ -23,7 +23,7 @@ from .schemas import (
 )
 
 MAX_ATTEMPTS = 3
-FACTCHECK_MATCH_THRESHOLD = 0.75  # same threshold the Verdict prompt uses
+FACTCHECK_MATCH_THRESHOLD = 0.85  # same threshold the prompts use; 0.77 matched a different claim about a video
 
 # confidence caps
 CAP_SINGLE_SOURCE = 0.70

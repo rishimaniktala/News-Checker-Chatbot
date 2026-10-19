@@ -41,7 +41,7 @@ class Settings:
 
 
 def load_settings() -> Settings:
-    sources = tuple(s.strip() for s in os.environ.get("SOURCES", "guardian,factcheck").split(",") if s.strip())
+    sources = tuple(s.strip() for s in os.environ.get("SOURCES", "guardian,web,factcheck").split(",") if s.strip())
     return Settings(
         gemini_model=os.environ.get("GEMINI_MODEL", "gemini-2.5-flash"),
         enable_validator=_flag("ENABLE_VALIDATOR", True),

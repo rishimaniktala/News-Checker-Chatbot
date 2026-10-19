@@ -179,3 +179,31 @@ def test_pasted_article_url_year_narrows_the_search(monkeypatch):
     inp = NormalizedInput(input_type=InputType.URL, text="t", source_url="https://www.theguardian.com/world/2024/mar/07/x")
     orchestrator.check_input(inp, fake_search, SETTINGS, make_budget(), lambda e: None, "r1")
     assert fake_search.year_hint == "2024"
+
+
+def test_a_loosely_matching_fact_check_does_not_override_the_verdict():
+    from app.rules import compute_consensus
+    from app.schemas import FactCheckReview
+
+    ev = _evidence()
+    ev.factchecks = [FactCheckReview(id="F1", publisher="P", url="https://x/y", claim_reviewed="a video of an army",
+                                     raw_rating="misleading", match_score=0.77, normalized_label=VerdictLabel.MISLEADING)]
+    verdict = _verdict("r")
+    verdict.label, verdict.citations[0].stance = VerdictLabel.TRUE, Stance.SUPPORTS
+    result = compute_consensus(verdict, ev)
+    assert result.final_label == VerdictLabel.TRUE and not result.conflict
+
+
+def test_missing_fact_check_publisher_falls_back_to_the_site_name():
+    import httpx
+    from app.retrievers import factcheck
+
+    payload = {"claims": [{"text": "c", "claimReview": [{"url": "https://www.misbar.com/en/x", "textualRating": "False"}]}]}
+    client = httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, json=payload)))
+    import os
+    os.environ["FACTCHECK_API_KEY"] = "k"
+    try:
+        [item] = factcheck.search("q", [], client)
+    finally:
+        del os.environ["FACTCHECK_API_KEY"]
+    assert item["publisher"] == "misbar.com"

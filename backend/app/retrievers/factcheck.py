@@ -4,6 +4,7 @@ import os
 
 import httpx
 
+from .web import site_name
 from ..resilience import CircuitOpen, call_with_retry, raise_for_status_clean
 
 URL = "https://factchecktools.googleapis.com/v1alpha1/claims:search"
@@ -36,7 +37,7 @@ def search(query: str, unavailable: list[str], client: httpx.Client | None = Non
                 continue
             out.append(
                 {
-                    "publisher": (review.get("publisher") or {}).get("name", "Unknown"),
+                    "publisher": (review.get("publisher") or {}).get("name") or site_name(review["url"]),
                     "url": review["url"],
                     "claim_reviewed": claim.get("text", ""),
                     "raw_rating": review["textualRating"],

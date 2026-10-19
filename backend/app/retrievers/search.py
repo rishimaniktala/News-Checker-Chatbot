@@ -1,4 +1,4 @@
-"""Retrieval entry point: Guardian + Fact Check, deduped and reranked."""
+"""Retrieval entry point: Guardian first, reputable web search as a fallback, then Fact Check. Deduped and reranked."""
 
 from typing import Callable
 
@@ -9,7 +9,7 @@ import httpx
 from ..budget import RunBudget
 from ..config import Settings
 from ..schemas import Claim, RankedEvidence
-from . import factcheck, guardian
+from . import factcheck, guardian, web
 from .rerank import EmbedFn, rank_factchecks, rank_guardian
 
 SearchFn = Callable[[Claim, list[str], int], RankedEvidence]
@@ -40,6 +40,10 @@ def make_search_fn(
                 if not found:
                     found = guardian.search(query, notes, client)
                 for p in found:
+                    passages.setdefault((p["url"], p["passage"]), p)
+            # The web is the fallback: only after a round that did not settle the claim, or when the Guardian found nothing.
+            if "web" in settings.sources and (round_no >= 2 or not passages):
+                for p in web.search(query, notes, client):
                     passages.setdefault((p["url"], p["passage"]), p)
             if "factcheck" in settings.sources:
                 for r in factcheck.search(query, notes, client):

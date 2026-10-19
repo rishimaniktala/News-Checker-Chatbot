@@ -10,7 +10,7 @@ The Guardian and published fact-checks are used as evidence, not as ground truth
       -> normalize: URL -> SSRF check -> Firecrawl; image -> Gemini OCR
       -> extract up to 3 claims (Gemini, structured JSON)
       -> per claim, up to 3 rounds:
-           retrieve (Guardian + Fact Check, reranked) -> evidence check
+           retrieve (Guardian; from round 2 also reputable web search; Fact Check) -> rerank -> evidence check
       -> verdict (Gemini, no tools) -> validator (plain code) -> consensus
       -> streamed to the browser over SSE
 
@@ -37,7 +37,8 @@ Check one claim from the terminal:
 |---|---|---|
 | `GEMINI_MODEL` | `gemini-2.5-flash` | model for all LLM calls |
 | `ENABLE_VALIDATOR` | `true` | turn the validator off for ablations |
-| `SOURCES` | `guardian,factcheck` | which evidence sources to query |
+| `SOURCES` | `guardian,web,factcheck` | evidence sources: The Guardian first, reputable web search as a fallback, Fact Check last |
+| `WEB_ALLOWED_DOMAINS` | built-in list | comma-separated outlets the web fallback may quote (news agencies, public broadcasters, fact-checkers, official bodies) |
 | `MAX_ITERATIONS` | `3` | 1 = single shot, 3 = retrieval and validator loops |
 | `MAX_COST_USD_PER_RUN` | `0.05` | hard stop for one run |
 

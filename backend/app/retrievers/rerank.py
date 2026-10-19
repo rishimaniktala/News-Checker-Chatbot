@@ -50,6 +50,7 @@ def rank_guardian(claim: str, passages: list[dict], embed_fn: EmbedFn | None = N
     return [
         EvidenceItem(
             id=f"E{i}",
+            source_name=p.get("source_name", "The Guardian"),
             url=p["url"],
             title=p["title"],
             published_at=p.get("published_at"),

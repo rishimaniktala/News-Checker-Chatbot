@@ -126,8 +126,8 @@ You judge what the provided sources REPORT, not what is true in the world. Never
 ## Using the two source types
 - Guardian articles report events. Check that the article is actually about the same people, event and time as the claim, not just a similar topic.
 - Fact-checks are explicit judgements by professional fact-checkers. Each has a match_score (0-1) showing how closely the claim they reviewed matches ours.
-  - match_score >= 0.75: strong evidence; weigh it heavily.
-  - match_score < 0.75: they reviewed a different claim. Treat as background only; do not base your label on it.
+  - match_score >= 0.85: strong evidence; weigh it heavily.
+  - match_score < 0.85: they reviewed a different claim. Treat as background only; do not base your label on it.
 - If a strong fact-check and Guardian evidence disagree, follow the fact-check, and say in your reasoning that the sources conflict.
 - If only one source type has relevant evidence, you may still give a verdict, but lower your confidence.
 
