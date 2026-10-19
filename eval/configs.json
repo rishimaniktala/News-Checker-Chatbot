@@ -1,0 +1,30 @@
+{
+  "baseline": {
+    "ENABLE_VALIDATOR": "false",
+    "SOURCES": "guardian",
+    "MAX_ITERATIONS": "1",
+    "MAX_COST_USD_PER_RUN": "0.05",
+    "GEMINI_MODEL": "gemini-2.5-flash"
+  },
+  "plus_factcheck": {
+    "ENABLE_VALIDATOR": "false",
+    "SOURCES": "guardian,factcheck",
+    "MAX_ITERATIONS": "1",
+    "MAX_COST_USD_PER_RUN": "0.05",
+    "GEMINI_MODEL": "gemini-2.5-flash"
+  },
+  "plus_loop": {
+    "ENABLE_VALIDATOR": "false",
+    "SOURCES": "guardian,factcheck",
+    "MAX_ITERATIONS": "3",
+    "MAX_COST_USD_PER_RUN": "0.05",
+    "GEMINI_MODEL": "gemini-2.5-flash"
+  },
+  "plus_validator": {
+    "ENABLE_VALIDATOR": "true",
+    "SOURCES": "guardian,factcheck",
+    "MAX_ITERATIONS": "3",
+    "MAX_COST_USD_PER_RUN": "0.05",
+    "GEMINI_MODEL": "gemini-2.5-flash"
+  }
+}

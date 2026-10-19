@@ -1,0 +1,149 @@
+{
+  "_provenance": "Hand-written by the team for this project. Not Venky's eval set. Claims were stable facts before 2025.",
+  "claims": [
+    {
+      "id": "T1",
+      "claim": "The UK held a referendum on leaving the European Union in June 2016.",
+      "label": "TRUE",
+      "note": "Brexit vote, 23 June 2016."
+    },
+    {
+      "id": "T2",
+      "claim": "Joe Biden won the 2020 US presidential election.",
+      "label": "TRUE",
+      "note": "Certified result."
+    },
+    {
+      "id": "T3",
+      "claim": "The Paris Agreement on climate change was adopted in December 2015.",
+      "label": "TRUE",
+      "note": "COP21."
+    },
+    {
+      "id": "T4",
+      "claim": "Queen Elizabeth II died in September 2022.",
+      "label": "TRUE",
+      "note": "Died at Balmoral, 8 Sep 2022."
+    },
+    {
+      "id": "T5",
+      "claim": "Russia launched a full-scale invasion of Ukraine in February 2022.",
+      "label": "TRUE",
+      "note": "24 Feb 2022."
+    },
+    {
+      "id": "T6",
+      "claim": "Qatar hosted the 2022 FIFA World Cup.",
+      "label": "TRUE",
+      "note": "Nov-Dec 2022."
+    },
+    {
+      "id": "T7",
+      "claim": "Argentina won the 2022 FIFA World Cup final against France.",
+      "label": "TRUE",
+      "note": "Penalty shoot-out."
+    },
+    {
+      "id": "T8",
+      "claim": "Rishi Sunak became UK prime minister in October 2022.",
+      "label": "TRUE",
+      "note": "Succeeded Liz Truss."
+    },
+    {
+      "id": "F1",
+      "claim": "The UK voted to remain in the European Union in the 2016 referendum.",
+      "label": "FALSE",
+      "note": "Leave won with 51.9%."
+    },
+    {
+      "id": "F2",
+      "claim": "Donald Trump won the 2020 US presidential election.",
+      "label": "FALSE",
+      "note": "Biden won."
+    },
+    {
+      "id": "F3",
+      "claim": "The 2020 Summer Olympics were held in Paris.",
+      "label": "FALSE",
+      "note": "Tokyo, held in 2021."
+    },
+    {
+      "id": "F4",
+      "claim": "Brazil won the 2022 FIFA World Cup.",
+      "label": "FALSE",
+      "note": "Argentina won."
+    },
+    {
+      "id": "F5",
+      "claim": "Boris Johnson was UK prime minister in 2015.",
+      "label": "FALSE",
+      "note": "David Cameron was PM in 2015."
+    },
+    {
+      "id": "F6",
+      "claim": "COVID-19 vaccines contain microchips for tracking people.",
+      "label": "FALSE",
+      "note": "Debunked conspiracy theory."
+    },
+    {
+      "id": "F7",
+      "claim": "The Great Wall of China is visible to the naked eye from the Moon.",
+      "label": "FALSE",
+      "note": "Common myth, false."
+    },
+    {
+      "id": "F8",
+      "claim": "The UK left the European Union in 2012.",
+      "label": "FALSE",
+      "note": "Left on 31 January 2020."
+    },
+    {
+      "id": "U1",
+      "claim": "My neighbour's cat was named Biscuit in 2019.",
+      "label": "UNVERIFIABLE",
+      "note": "Obscure, no coverage."
+    },
+    {
+      "id": "U2",
+      "claim": "Most people in London secretly prefer tea to coffee.",
+      "label": "UNVERIFIABLE",
+      "note": "Unfalsifiable generalisation."
+    },
+    {
+      "id": "U3",
+      "claim": "The mayor of a small unnamed village in Norfolk whispered a secret to a pigeon in 2018.",
+      "label": "UNVERIFIABLE",
+      "note": "Obscure, uncheckable."
+    },
+    {
+      "id": "U4",
+      "claim": "Pineapple on pizza is the best topping.",
+      "label": "UNVERIFIABLE",
+      "note": "Opinion."
+    },
+    {
+      "id": "U5",
+      "claim": "A local bakery in Leeds sold exactly 412 sourdough loaves on 3 March 2017.",
+      "label": "UNVERIFIABLE",
+      "note": "Obscure figure, no source."
+    },
+    {
+      "id": "U6",
+      "claim": "Aliens visited the Earth in 2014 but governments covered it up perfectly.",
+      "label": "UNVERIFIABLE",
+      "note": "Unfalsifiable conspiracy."
+    },
+    {
+      "id": "U7",
+      "claim": "The prime minister privately thought the 2019 budget was boring.",
+      "label": "UNVERIFIABLE",
+      "note": "Private thoughts, unknowable."
+    },
+    {
+      "id": "U8",
+      "claim": "Every Tuesday in 2016 was slightly rainier than the Wednesday before it in Cardiff.",
+      "label": "UNVERIFIABLE",
+      "note": "Too obscure to settle."
+    }
+  ]
+}
