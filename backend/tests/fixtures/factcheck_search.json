@@ -1,0 +1,34 @@
+{
+  "claims": [
+    {
+      "text": "The Bank of England cut interest rates to 3% in March 2024",
+      "claimant": "Social media post",
+      "claimDate": "2024-03-14T00:00:00Z",
+      "claimReview": [
+        {
+          "publisher": {"name": "Full Fact", "site": "fullfact.org"},
+          "url": "https://fullfact.org/economy/boe-rates-march-2024/",
+          "title": "The Bank of England did not cut rates in March 2024",
+          "reviewDate": "2024-03-15T10:00:00Z",
+          "textualRating": "False",
+          "languageCode": "en"
+        }
+      ]
+    },
+    {
+      "text": "Interest rates are at their highest level ever",
+      "claimant": "Opposition politician",
+      "claimDate": "2024-02-01T00:00:00Z",
+      "claimReview": [
+        {
+          "publisher": {"name": "Reuters Fact Check", "site": "reuters.com"},
+          "url": "https://www.reuters.com/fact-check/rates-highest-ever/",
+          "title": "Rates are not at a record high",
+          "reviewDate": "2024-02-05T12:00:00Z",
+          "textualRating": "Mostly False",
+          "languageCode": "en"
+        }
+      ]
+    }
+  ]
+}

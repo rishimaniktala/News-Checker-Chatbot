@@ -1,0 +1,44 @@
+{
+  "response": {
+    "status": "ok",
+    "userTier": "developer",
+    "total": 2,
+    "startIndex": 1,
+    "pageSize": 8,
+    "currentPage": 1,
+    "pages": 1,
+    "orderBy": "relevance",
+    "results": [
+      {
+        "id": "world/2024/mar/12/uk-interest-rates-held",
+        "type": "article",
+        "sectionId": "world",
+        "webPublicationDate": "2024-03-12T14:05:00Z",
+        "webTitle": "Bank of England holds interest rates at 5.25%",
+        "webUrl": "https://www.theguardian.com/world/2024/mar/12/uk-interest-rates-held",
+        "apiUrl": "https://content.guardianapis.com/world/2024/mar/12/uk-interest-rates-held",
+        "fields": {
+          "headline": "Bank of England holds interest rates at 5.25%",
+          "bodyText": "The Bank of England has held interest rates at 5.25% for the fifth meeting in a row.\nMembers of the monetary policy committee voted 8-1 to keep rates unchanged. One member voted for a cut.\nInflation fell to 4% in January, down from a peak of 11.1% in October 2022, but remains above the 2% target."
+        },
+        "isHosted": false,
+        "pillarId": "pillar/news"
+      },
+      {
+        "id": "science/2023/jun/01/moon-landing-conspiracy",
+        "type": "article",
+        "sectionId": "science",
+        "webPublicationDate": "2023-06-01T09:00:00Z",
+        "webTitle": "Why the moon landing conspiracy theories persist",
+        "webUrl": "https://www.theguardian.com/science/2023/jun/01/moon-landing-conspiracy",
+        "apiUrl": "https://content.guardianapis.com/science/2023/jun/01/moon-landing-conspiracy",
+        "fields": {
+          "headline": "Why the moon landing conspiracy theories persist",
+          "bodyText": "Six Apollo missions landed humans on the moon between 1969 and 1972. Independent evidence includes retroreflectors still used by observatories today."
+        },
+        "isHosted": false,
+        "pillarId": "pillar/news"
+      }
+    ]
+  }
+}
