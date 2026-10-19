@@ -255,7 +255,13 @@ def run_ocr(image_bytes: bytes, mime_type: str = "image/png") -> OcrResult:
 
 def extract_claims(inp: NormalizedInput, today: date | None = None) -> ClaimExtraction:
     """LLM call 1: up to 3 claims, each with search queries if checkworthy."""
-    result = _call(EXTRACTION_SYSTEM_PROMPT, build_extraction_user_prompt(inp, today), ClaimExtraction)
+    for attempt in range(2):
+        result = _call(EXTRACTION_SYSTEM_PROMPT, build_extraction_user_prompt(inp, today), ClaimExtraction)
+        # Gemini Flash sometimes emits newlines in place of an accented letter; ask again once.
+        if not any("\n" in c.text for c in result.claims):
+            break
+    for c in result.claims:
+        c.text = " ".join(c.text.split())
     # Make claim ids unique even if the model repeats one (orchestrator keys on them).
     seen: set[str] = set()
     for i, c in enumerate(result.claims, start=1):

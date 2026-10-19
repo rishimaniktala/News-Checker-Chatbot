@@ -131,3 +131,23 @@ def test_fact_check_the_evidence_check_did_not_mark_relevant_never_reaches_the_v
                                       lambda e: None, "r1")
     assert seen == [[]]
     assert report.consensus.factcheck_label is None
+
+
+def test_extraction_asks_again_when_a_claim_has_newlines_in_a_word(monkeypatch):
+    from app import agents
+    from app.schemas import Claim, ClaimExtraction, InputType, NormalizedInput
+
+    def reply(text):
+        return ClaimExtraction(claims=[Claim(id="c1", text=text, checkworthy=True, search_queries=["q"])])
+
+    answers = iter([reply("Prime Minister S\n\n\nbastien Lecornu resigned"), reply("Prime Minister Sébastien Lecornu resigned")])
+    monkeypatch.setattr(agents, "_call", lambda *a, **k: next(answers))
+    out = agents.extract_claims(NormalizedInput(input_type=InputType.TEXT, text="x"))
+    assert out.claims[0].text == "Prime Minister Sébastien Lecornu resigned"
+
+
+def test_todays_day_and_month_may_be_quoted():
+    from datetime import date
+
+    today = date.today()
+    assert check_rationale(_verdict(f"As of {today.day} {today.month} the rate was 4.2%."), _evidence()) == []

@@ -2,6 +2,8 @@
 
 import os
 import re
+import threading
+import time
 
 import httpx
 
@@ -11,6 +13,18 @@ URL = "https://content.guardianapis.com/search"
 MAX_PASSAGE = 600
 MAX_PASSAGES_PER_ARTICLE = 20
 TIMEOUT = 8.0
+MIN_GAP_SECONDS = 1.1  # the free developer key allows about one call per second
+_gap_lock = threading.Lock()
+_last_call = 0.0
+
+
+def _wait_turn() -> None:
+    global _last_call
+    with _gap_lock:
+        wait = _last_call + MIN_GAP_SECONDS - time.monotonic()
+        if wait > 0:
+            time.sleep(wait)
+        _last_call = time.monotonic()
 
 
 def split_passages(text: str, limit: int = MAX_PASSAGE) -> list[str]:
@@ -48,6 +62,7 @@ def search(query: str, unavailable: list[str], client: httpx.Client | None = Non
     }
 
     def fetch():
+        _wait_turn()
         resp = (client or httpx).get(URL, params=params, headers={"api-key": key}, timeout=TIMEOUT)
         raise_for_status_clean(resp, "guardian")
         return resp.json()

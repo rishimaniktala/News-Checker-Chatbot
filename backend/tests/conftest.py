@@ -8,3 +8,8 @@ def offline_by_default(monkeypatch):
     """The real .env is loaded at import; no test may reach a live API unless it sets a key itself."""
     for name in KEYS:
         monkeypatch.delenv(name, raising=False)
+
+
+@pytest.fixture(autouse=True)
+def no_guardian_throttle(monkeypatch):
+    monkeypatch.setattr("app.retrievers.guardian.MIN_GAP_SECONDS", 0.0)
