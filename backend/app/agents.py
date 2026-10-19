@@ -20,16 +20,18 @@ Setup:
 
 from __future__ import annotations
 
-import os
+from contextvars import ContextVar
 from datetime import date
 from enum import Enum
-from typing import Optional, TypeVar
+from typing import Callable, Optional, TypeVar
 
 from google import genai
 from google.genai import errors as genai_errors
 from google.genai import types
 from pydantic import BaseModel, Field, ValidationError
 
+from .config import load_settings
+from .resilience import call_with_retry
 from .prompts import (
     EXTRACTION_SYSTEM_PROMPT,
     OCR_SYSTEM_PROMPT,
@@ -47,7 +49,13 @@ from .schemas import (
     RankedEvidence,
 )
 
-MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
+_usage_sink: ContextVar[Optional[Callable[[str, int, int], None]]] = ContextVar("usage_sink", default=None)
+
+
+def set_usage_sink(sink: Optional[Callable[[str, int, int], None]]) -> None:
+    """Report (model, tokens_in, tokens_out) of each Gemini call to `sink`.
+    Scoped to the calling thread's context, so parallel runs do not mix."""
+    _usage_sink.set(sink)
 
 
 # ------------------------------------------------- evidence check: format
@@ -201,8 +209,10 @@ def _call(system: str, contents, schema: type[T], attempts: int = 2) -> T:
     while tries < attempts:
         config = _build_config(system, schema)  # setup errors are raised, not retried
         try:
-            response = _get_client().models.generate_content(
-                model=MODEL, contents=contents, config=config
+            model = load_settings().gemini_model
+            response = call_with_retry(
+                lambda: _get_client().models.generate_content(model=model, contents=contents, config=config),
+                api="gemini",
             )
         except genai_errors.ClientError as e:
             # Older models (e.g. gemini-2.5-*) reject thinking_level: drop it and retry.
@@ -211,6 +221,9 @@ def _call(system: str, contents, schema: type[T], attempts: int = 2) -> T:
                 continue
             raise
         tries += 1
+        sink, usage = _usage_sink.get(), getattr(response, "usage_metadata", None)
+        if sink and usage:
+            sink(model, usage.prompt_token_count or 0, usage.candidates_token_count or 0)
         try:
             return schema.model_validate_json(response.text or "")
         except ValidationError as e:

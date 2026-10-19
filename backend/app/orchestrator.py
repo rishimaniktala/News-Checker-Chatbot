@@ -1,7 +1,7 @@
 """Example orchestrator: runs the whole pipeline for one input, using
 agents.py (LLM calls) and rules.py (validator, consensus, roll-up).
 
-Per checkworthy claim:
+Per checkworthy claim (loop caps come from settings.max_iterations):
     retrieve -> check_evidence ──insufficient──> new queries -> retrieve   (max 3 rounds)
                      │ sufficient
                      v
@@ -17,17 +17,20 @@ whoever builds retrieval: search_fn(claim, queries, attempt) -> RankedEvidence.
 
 from __future__ import annotations
 
-import uuid
+import logging
+from functools import partial
 from typing import Callable
 
 from .agents import EvidenceDecision, check_evidence, extract_claims, give_verdict
+from .budget import RunBudget
+from .config import Settings
 from .rules import (
     MAX_ATTEMPTS,
     apply_rating_normalization,
+    check_rationale,
     compute_consensus,
     factcheck_answer,
     rollup_overall,
-    should_retry,
     unverifiable_result,
     validate_verdict,
 )
@@ -37,19 +40,33 @@ from .schemas import (
     FinalReport,
     NormalizedInput,
     RankedEvidence,
+    Step,
+    StepStatus,
+    TraceEvent,
     VerdictLabel,
 )
 
+log = logging.getLogger(__name__)
+
 MAX_SEARCH_ROUNDS = 3
 SearchFn = Callable[[Claim, list[str], int], RankedEvidence]
+Emit = Callable[[dict], None]
 
 
-def _unverifiable_report(claim: Claim, why: str, evidence: RankedEvidence | None) -> ClaimReport:
+def trace(emit: Emit, run_id: str, step: Step, status: StepStatus,
+          claim_id: str | None = None, message: str = "", payload: dict | None = None) -> None:
+    event = TraceEvent(run_id=run_id, step=step, status=status, claim_id=claim_id,
+                       message=message, payload=payload)
+    emit({"type": "trace", **event.model_dump(mode="json")})
+
+
+def _unverifiable_report(claim: Claim, why: str, evidence: RankedEvidence | None,
+                         answer: str = "I couldn't confirm this: no relevant coverage was found.") -> ClaimReport:
     return ClaimReport(
         claim=claim,
         label=VerdictLabel.UNVERIFIABLE,
         confidence=0.0,
-        answer="I couldn't confirm this: no relevant coverage was found.",
+        answer=answer,
         reasoning=why,
         evidence=evidence,
         consensus=unverifiable_result(claim.id, why),
@@ -57,57 +74,79 @@ def _unverifiable_report(claim: Claim, why: str, evidence: RankedEvidence | None
     )
 
 
-def check_claim(claim: Claim, search_fn: SearchFn, source_url: str | None = None,
-                trace: list | None = None) -> ClaimReport:
-    trace = trace if trace is not None else []
+def check_claim(claim: Claim, search_fn: SearchFn, settings: Settings, budget: RunBudget,
+                emit: Emit, run_id: str, source_url: str | None = None) -> ClaimReport:
+    t = partial(trace, emit, run_id, claim_id=claim.id)
+    rounds = min(MAX_SEARCH_ROUNDS, settings.max_iterations)
     queries = list(claim.search_queries)
     tried: list[str] = []
     evidence: RankedEvidence | None = None
     sufficient = False
 
-    # 1. Retrieve <-> check_evidence loop
-    for round_no in range(1, MAX_SEARCH_ROUNDS + 1):
+    for round_no in range(1, rounds + 1):
+        if budget.exhausted:
+            t(Step.RETRIEVE, StepStatus.FAILED, message="Cost cap reached; stopping the search.")
+            break
+        queries = [q for q in queries if budget.register_query(q)]
+        if not queries:
+            t(Step.RETRIEVE, StepStatus.COMPLETED, message="No new queries to try; stopping the search.")
+            break
         tried += queries
+        t(Step.RETRIEVE, StepStatus.STARTED, payload={"round": round_no, "queries": queries})
         evidence = search_fn(claim, queries, round_no)
-        # The pasted article can't be evidence for itself.
         evidence.guardian = [e for e in evidence.guardian if e.url != source_url]
         apply_rating_normalization(evidence)
+        t(Step.RETRIEVE, StepStatus.COMPLETED, message=(
+            f"{len(evidence.guardian)} articles, {len(evidence.factchecks)} fact-checks"))
 
         check = check_evidence(claim, evidence, tried)
-        trace.append({"claim": claim.id, "step": "verify_evidence", "round": round_no,
-                      "queries": queries, "decision": check.decision.value, "reason": check.reason})
-        if check.decision == EvidenceDecision.SUFFICIENT:
-            sufficient = True
+        sufficient = check.decision == EvidenceDecision.SUFFICIENT
+        will_retry = not sufficient and bool(check.new_search_queries) and round_no < rounds
+        t(Step.RETRIEVE, StepStatus.RETRY if will_retry else StepStatus.COMPLETED,
+          message=check.reason, payload={"round": round_no, "decision": check.decision.value})
+        if not will_retry:
             break
-        if not check.new_search_queries:
-            break  # nothing new to try
         queries = check.new_search_queries
 
     if not sufficient:
-        return _unverifiable_report(
-            claim, f"No relevant coverage found after {len(tried)} search queries.", evidence)
+        why = f"No relevant coverage found after {len(tried)} search queries."
+        t(Step.RETRIEVE, StepStatus.FAILED, message=why)
+        return _unverifiable_report(claim, why, evidence)
 
-    # 2. Verdict <-> validator loop
+    attempts = min(MAX_ATTEMPTS, settings.max_iterations)
     failure: str | None = None
     verdict = None
-    for attempt in range(1, MAX_ATTEMPTS + 1):
+    attempt = 0
+    for attempt in range(1, attempts + 1):
+        if budget.exhausted:
+            t(Step.VERDICT, StepStatus.FAILED, message="Cost cap reached; stopping.")
+            break
+        t(Step.VERDICT, StepStatus.STARTED, payload={"attempt": attempt})
         candidate = give_verdict(claim, evidence, previous_failure=failure)
-        validation = validate_verdict(candidate, evidence, attempt)
-        trace.append({"claim": claim.id, "step": "validate", "attempt": attempt,
-                      "label": candidate.label.value, "passed": validation.passed})
-        if validation.passed:
+        t(Step.VERDICT, StepStatus.COMPLETED, payload={"attempt": attempt, "label": candidate.label.value})
+        if not settings.enable_validator:
+            t(Step.VALIDATE, StepStatus.COMPLETED, message="Validator disabled; verdict accepted unchecked.")
             verdict = candidate
             break
-        failure = validation.retry_hint
-        if not should_retry(validation):
+        validation = validate_verdict(candidate, evidence, attempt)
+        issues = check_rationale(candidate, evidence) if validation.passed else []
+        passed = validation.passed and not issues
+        if not passed:
+            failure = validation.retry_hint or "Problems with your answer text:\n" + "\n".join(issues)
+        status = (StepStatus.COMPLETED if passed
+                  else StepStatus.RETRY if attempt < attempts else StepStatus.FAILED)
+        t(Step.VALIDATE, status, payload={"attempt": attempt, "passed": passed},
+          message="" if passed else failure)
+        if passed:
+            verdict = candidate
             break
 
     if verdict is None:
         return _unverifiable_report(
             claim, "The model's citations could not be verified against the sources.", evidence)
 
-    # 3. Consensus
     consensus = compute_consensus(verdict, evidence)
+    t(Step.CONSENSUS, StepStatus.COMPLETED, message=f"{consensus.final_label.value}")
     answer = verdict.answer
     if consensus.label_changed:
         answer = factcheck_answer(evidence) or answer
@@ -124,17 +163,31 @@ def check_claim(claim: Claim, search_fn: SearchFn, source_url: str | None = None
     )
 
 
-def check_input(inp: NormalizedInput, search_fn: SearchFn, trace: list | None = None) -> FinalReport:
+def check_input(inp: NormalizedInput, search_fn: SearchFn, settings: Settings, budget: RunBudget,
+                emit: Emit, run_id: str) -> FinalReport:
+    t = partial(trace, emit, run_id)
+    t(Step.EXTRACT, StepStatus.STARTED)
     extraction = extract_claims(inp)
     checkable = [c for c in extraction.claims if c.checkworthy]
     skipped = [c for c in extraction.claims if not c.checkworthy]
+    t(Step.EXTRACT, StepStatus.COMPLETED,
+      message=f"{len(checkable)} claims to check, {len(skipped)} skipped")
 
-    reports = [check_claim(c, search_fn, inp.source_url, trace) for c in checkable]
+    reports = []
+    for claim in checkable:
+        try:
+            reports.append(check_claim(claim, search_fn, settings, budget, emit, run_id, inp.source_url))
+        except Exception as e:
+            log.exception("claim %s failed", claim.id)
+            t(Step.VERDICT, StepStatus.FAILED, claim.id, f"{type(e).__name__}: {e}")
+            reports.append(_unverifiable_report(
+                claim, "A step failed while checking this claim.", None,
+                answer="I couldn't check this claim because something went wrong on my side."))
     overall, confidence = rollup_overall(reports)
     answer = " ".join(r.answer for r in reports) or (
         extraction.notes or "Nothing in this input could be fact-checked.")
     return FinalReport(
-        run_id=uuid.uuid4().hex[:12],
+        run_id=run_id,
         input=inp,
         overall_label=overall,
         overall_confidence=confidence,
@@ -142,34 +195,3 @@ def check_input(inp: NormalizedInput, search_fn: SearchFn, trace: list | None = 
         skipped_claims=skipped,
         answer=answer,
     )
-
-
-if __name__ == "__main__":
-    # Demo with a fake search function. Needs GEMINI_API_KEY.
-    # Set OFF_TOPIC = True to watch the query-rewriting loop instead.
-    from .schemas import EvidenceItem, InputType
-
-    OFF_TOPIC = False
-
-    def fake_search(claim: Claim, queries: list[str], attempt: int) -> RankedEvidence:
-        passage = ("Volvo reported higher car sales in Gothenburg this quarter." if OFF_TOPIC else
-                   "Sweden has not banned cash. Shops may refuse cash payments, "
-                   "but pharmacies and some essential services are required to accept it.")
-        return RankedEvidence(
-            claim_id=claim.id,
-            attempt=attempt,
-            guardian=[EvidenceItem(id="E1", url="https://www.theguardian.com/example",
-                                   title="Sweden's cashless shift", passage=passage,
-                                   rerank_score=0.8)],
-        )
-
-    inp = NormalizedInput(
-        input_type=InputType.TEXT,
-        text="Sverige förbjöd kontantbetalningar i alla butiker år 2025, enligt regeringen.",
-    )
-    trace: list = []
-    report = check_input(inp, fake_search, trace)
-
-    import json
-    print(json.dumps(trace, indent=2, ensure_ascii=False))
-    print(report.model_dump_json(indent=2, exclude={"claims": {"__all__": {"evidence"}}}))
