@@ -102,6 +102,12 @@ def _fail(c: Citation, reason: CitationFailure) -> FailedCitation:
     return FailedCitation(evidence_id=c.evidence_id, quote=c.quote, reason=reason)
 
 
+def check_rationale(verdict: ClaimVerdict, evidence: RankedEvidence) -> list[str]:
+    """Problems with the verdict's answer and reasoning text; empty list means fine.
+    Filled in by the AI engineer."""
+    return []
+
+
 def should_retry(validation: ValidationResult) -> bool:
     return not validation.passed and validation.attempt < MAX_ATTEMPTS
 
