@@ -90,11 +90,15 @@ export default function Verdict({ report }: { report: FinalReport }) {
   return (
     <section aria-labelledby="verdict-h" className="space-y-4 rounded-lg border border-slate-300 bg-white p-4">
       <h2 id="verdict-h" className="text-base font-semibold">Verdict</h2>
-      <p className="flex flex-wrap items-center gap-2">
-        <Badge label={report.overall_label} />
-        <span className="text-sm">Confidence: {confidenceLabel(report.overall_confidence)}</span>
-      </p>
-      <p className="text-base">{report.answer}</p>
+      {report.claims.length !== 1 && (
+        <>
+          <p className="flex flex-wrap items-center gap-2">
+            <Badge label={report.overall_label} />
+            <span className="text-sm">Confidence: {confidenceLabel(report.overall_confidence)}</span>
+          </p>
+          <p className="text-base">{report.answer}</p>
+        </>
+      )}
       {report.claims.map((c) => <ClaimBlock key={c.claim.id} claim={c} />)}
       {report.skipped_claims.length > 0 && (
         <div className="border-t border-slate-200 pt-3 text-sm">
