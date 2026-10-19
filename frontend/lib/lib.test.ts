@@ -5,6 +5,7 @@ import { reducer, initialState, type State } from "./reducer.ts";
 import { locateQuote } from "./quote.ts";
 import { confidenceLabel, consensusText } from "./labels.ts";
 import { imageProblem } from "./image.ts";
+import { stageStates } from "./pipeline.ts";
 import type { FinalReport, SseEvent } from "./types.ts";
 
 const tr = (step: string, status: string, message = "", claim_id: string | null = null) =>
@@ -103,4 +104,12 @@ test("image validation", () => {
   assert.equal(imageProblem({ type: "image/png", size: 10 }), null);
   assert.ok(imageProblem({ type: "image/gif", size: 10 }));
   assert.ok(imageProblem({ type: "image/jpeg", size: 5 * 1024 * 1024 + 1 }));
+});
+
+test("pipeline stages follow the furthest step reached", () => {
+  assert.deepEqual(stageStates([], "running"), ["pending", "pending", "pending", "pending", "pending", "pending"]);
+  const mid = stageStates([{ step: "normalize" }, { step: "retrieve" }, { step: "retrieve" }], "running");
+  assert.deepEqual(mid, ["done", "done", "active", "pending", "pending", "pending"]);
+  assert.equal(stageStates([{ step: "verdict" }], "error")[3], "failed");
+  assert.ok(stageStates([{ step: "normalize" }], "done").every((s) => s === "done"));
 });

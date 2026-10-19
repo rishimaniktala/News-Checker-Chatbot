@@ -3,7 +3,9 @@ import { useReducer, useRef } from "react";
 import InputPanel from "@/components/InputPanel";
 import Trace from "@/components/Trace";
 import Verdict from "@/components/Verdict";
-import Details from "@/components/Details";
+import Pipeline from "@/components/Pipeline";
+import Receipt from "@/components/Receipt";
+import Skeleton from "@/components/Skeleton";
 import { initialState, reducer } from "@/lib/reducer";
 import { streamCheck } from "@/lib/stream";
 import type { CheckRequest } from "@/lib/types";
@@ -42,27 +44,42 @@ export default function Page() {
 
   const running = state.status === "running";
   return (
-    <main className="mx-auto max-w-6xl space-y-4 p-4">
-      <h1 className="text-2xl font-bold">News Checker</h1>
+    <main className="mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
+      <header className="rise mb-7 sm:mb-9">
+        <p className="font-mono text-xs uppercase tracking-[0.22em] text-accent">Claims in · receipts out</p>
+        <h1 className="mt-1 font-display text-4xl font-bold leading-none tracking-tight sm:text-6xl">News Checker</h1>
+        <p className="mt-3 max-w-xl text-base text-muted sm:text-lg">
+          Paste a claim, a link or a screenshot. We check it against The Guardian and published fact-checks, and show our working.
+        </p>
+      </header>
+
       <InputPanel running={running} onSubmit={run} onCancel={cancel} />
-      <div className="grid gap-4 md:grid-cols-2">
-        <Trace lines={state.trace} />
-        <div className="space-y-4">
-          {state.status === "error" && (
-            <section role="alert" className="rounded-lg border border-red-800 bg-red-50 p-4 text-red-900">
-              <h2 className="text-base font-semibold">Something went wrong</h2>
-              <p className="mt-1 text-sm">{state.error}</p>
-            </section>
-          )}
-          {state.report && <Verdict report={state.report} />}
-          {!state.report && state.status !== "error" && (
-            <section className="rounded-lg border border-slate-300 bg-white p-4 text-sm text-slate-600">
-              {running ? "Working on it..." : "The verdict appears here."}
-            </section>
-          )}
-          {state.done && <Details done={state.done} />}
+
+      {state.status !== "idle" || state.trace.length > 0 ? (
+        <div className="mt-8 space-y-6">
+          <Pipeline trace={state.trace} status={state.status} />
+          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_21rem]">
+            <div className="space-y-4">
+              {state.status === "error" && (
+                <section role="alert" className="rise rounded-2xl border-2 border-accent bg-card p-5">
+                  <h2 className="font-display text-xl font-bold text-accent">That didn&apos;t work</h2>
+                  <p className="mt-1 text-base">{state.error}</p>
+                </section>
+              )}
+              {state.report && <Verdict report={state.report} />}
+              {!state.report && running && <Skeleton />}
+              {state.done && <Receipt done={state.done} />}
+            </div>
+            <div className="lg:sticky lg:top-6">
+              <Trace lines={state.trace} running={running} />
+            </div>
+          </div>
         </div>
-      </div>
+      ) : (
+        <p className="rise mt-10 text-center font-display text-lg italic text-muted" style={{ ["--d" as string]: "200ms" }}>
+          Nothing checked yet. Try one of the examples above.
+        </p>
+      )}
     </main>
   );
 }
