@@ -1,0 +1,6 @@
+# Report: ai
+DONE: versioned prompts v1 (byte-equal, sha256 test) and v2; v2 verdict with components, time rules, few-shot from real failures; judge.py (derive_label, more_conservative, reconcile); confidence.py (six named factors, calibration.json cutoffs); orchestrator second-opinion (Step.REVIEW), fills components/model_used/fallback_used/independent_sources/confidence_factors/prompt_version/models_used; evidence-check covered/missing components; eval 61 claims (13 regressions), ECE, reliability bins, critical swaps, arms v1_baseline/v2_primary/v2_lite, calibrate.py.
+EVIDENCE (engineer's claim, lead to re-run): pytest 560 passed, 2 skipped; eval --fake 7 configs x 61 claims.
+FINDINGS: regression tests use fake judge replies (exercise the code safety net, not the live model); TRUE vs FALSE mismatch becomes UNVERIFIABLE; circular import retrievers/dedupe -> rerank -> rules handled with a lazy import; single-source 0.70 cap hides factor differences; model's own confidence no longer an input; compute_consensus has new kwargs.
+GAPS: nothing run live; v2 prompts, 61-claim set and cutoffs unvalidated; run.py must call llm.begin_run for models_used; calibration.json must ship in the Docker image.
+BLOCKERS: none

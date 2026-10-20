@@ -1,0 +1,8 @@
+title = "news-checker"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Example env file holds empty values only"
+paths = ['''\.env\.example$''', '''package-lock\.json$''']
