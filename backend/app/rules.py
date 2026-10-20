@@ -41,6 +41,7 @@ def _norm(text: str) -> str:
     """Normalise so harmless differences don't fail a quote: unicode form,
     curly quotes/dashes, whitespace. Case and wording stay strict."""
     text = unicodedata.normalize("NFKC", text)
+    text = re.sub("[\u00ad\u200b-\u200f\u2060\ufeff]", "", text)
     text = (
         text.replace("‘", "'").replace("’", "'")
         .replace("“", '"').replace("”", '"')
@@ -130,30 +131,36 @@ def _fail(c: Citation, reason: CitationFailure) -> FailedCitation:
 _URL_RE = re.compile(r"https?://[^\s<>\"']+")
 _ID_RE = re.compile(r"\b[EF]\d+\b")
 _NUM_RE = re.compile(
-    r"(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)(?:\s*(thousand|million|billion|trillion)\b)?",
+    r"((?<!\d)\d{1,3}(?:[, \u00a0\u202f]\d{3})+(?!\d)(?:\.\d+)?|\d+(?:\.\d+)?)"
+    r"(?:\s*(thousand|million|billion|trillion)\b|(k|m|bn|tn)\b)?",
     re.IGNORECASE,
 )
-_SCALE = {"thousand": 10**3, "million": 10**6, "billion": 10**9, "trillion": 10**12}
+_SCALE = {"thousand": 10**3, "million": 10**6, "billion": 10**9, "trillion": 10**12,
+          "k": 10**3, "m": 10**6, "bn": 10**9, "tn": 10**12}
 
 
 def _urls(text: str) -> list[str]:
     return [u.rstrip(".,;:)]}!?") for u in _URL_RE.findall(text)]
 
 
-def _numbers(text: str) -> set[Decimal]:
-    """Numeric values in text. '5%' and '5 percent' both give 5; '1,200' gives
-    1200; '2 million' gives 2000000. URLs and evidence ids like E1 are ignored."""
+def _numbers(text: str, source: bool = False) -> set[Decimal]:
+    """Numeric values in text. '5%' and '5 percent' both give 5; '1,200' and '1 200' give
+    1200; '2 million' and '2m' give 2000000. URLs and evidence ids like E1 are ignored.
+    With source=True an abbreviation such as '5m' also yields 5, since it may mean metres."""
     text = _ID_RE.sub(" ", _URL_RE.sub(" ", _norm(text)))
     out = set()
-    for digits, scale in _NUM_RE.findall(text):
-        n = Decimal(digits.replace(",", ""))
-        out.add((n * _SCALE.get(scale.lower(), 1)).normalize())
+    for digits, word, short in _NUM_RE.findall(text):
+        n = Decimal(re.sub(r"[, \u00a0\u202f]", "", digits))
+        scale = (word or short).lower()
+        out.add((n * _SCALE.get(scale, 1)).normalize())
+        if source and short:
+            out.add(n.normalize())
     return out
 
 
 _INSTRUCTION_LIKE = re.compile(
     r"(ignore|disregard|forget)\s+(all\s+|any\s+)?(the\s+)?(previous|prior|above|earlier)\s+(instructions|prompts?)"
-    r"|\b(say|answer|respond|output|return|label)\b[^.\n]{0,40}\b(true|false|supported|contradicted)\b"
+    r"|(?:^|[.!?]\s+)(say|answer|respond|output|return|label)\b[^.\n]{0,40}\b(true|false|supported|contradicted)\b"
     r"|\bsystem\s*:|\byou\s+(must|are\s+now)\b",
     re.IGNORECASE,
 )
@@ -180,7 +187,7 @@ def check_rationale(verdict: ClaimVerdict, evidence: RankedEvidence, claim_text:
     dates = [e.published_at for e in evidence.guardian] + [f.reviewed_at for f in evidence.factchecks]
     texts += [f"{f.match_score:.2f}" for f in evidence.factchecks]
     texts += [claim_text] + [f"{d.year} {d.month} {d.day}" for d in [date.today(), *filter(None, dates)]]
-    known = set().union(*(_numbers(t) for t in texts))
+    known = set().union(*(_numbers(t, source=True) for t in texts))
 
     for n in sorted(_numbers(prose)):
         if n not in known:
@@ -226,6 +233,8 @@ _RATING_PATTERNS: list[tuple[str, VerdictLabel]] = [
     ("partially", VerdictLabel.MISLEADING),
     ("mixture", VerdictLabel.MISLEADING),
     ("mixed", VerdictLabel.MISLEADING),
+    ("not misleading", VerdictLabel.TRUE),
+    ("not false", VerdictLabel.TRUE),
     ("misleading", VerdictLabel.MISLEADING),
     ("missing context", VerdictLabel.MISLEADING),
     ("needs context", VerdictLabel.MISLEADING),

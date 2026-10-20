@@ -157,7 +157,7 @@ def _run(api: str, model: str, system: str, contents, schema: type[T], role: str
         response = call_with_retry(lambda: _send(model, system, contents, schema, role), api=api)
         _record(role, model, api == FALLBACK, response, started)
         try:
-            return schema.model_validate_json(response.text or "")
+            return schema.model_validate_json(_json_text(response.text))
         except ValidationError as e:
             last_error = e
     raise AgentError(f"{schema.__name__}: model gave no valid output after {attempts} attempts: {last_error}")
@@ -166,6 +166,15 @@ def _run(api: str, model: str, system: str, contents, schema: type[T], role: str
 def _use_fallback(exc: Exception) -> bool:
     """Outages, rate limits and a missing model switch models. Auth and bad requests do not."""
     return isinstance(exc, (AgentError, CircuitOpen)) or retryable(exc) or getattr(exc, "code", None) == 404
+
+
+def _json_text(text: str | None) -> str:
+    """The reply with a markdown code fence removed, if the model added one."""
+    text = (text or "").strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[1] if "\n" in text else ""
+        text = text.rsplit("```", 1)[0]
+    return text.strip()
 
 
 def generate(system: str, contents, schema: type[T], *, role: str = "judge", attempts: int = 2) -> T:

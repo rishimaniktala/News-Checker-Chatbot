@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { parseSse } from "./sse.ts";
 import { reducer, initialState, type State } from "./reducer.ts";
-import { locateQuote } from "./quote.ts";
+import { locateQuote, locateSegments } from "./quote.ts";
 import { confidenceLabel, consensusText } from "./labels.ts";
 import { imageProblem } from "./image.ts";
 import { stageStates } from "./pipeline.ts";
@@ -147,4 +147,14 @@ test("labels: cutoffs are exported and applied", () => {
   assert.equal(confidenceLabel(MEDIUM_CONFIDENCE), "Medium");
   assert.equal(confidenceLabel(MEDIUM_CONFIDENCE - 0.01), "Low");
   assert.equal(STEP_NAME.second_opinion, "Getting a second opinion");
+});
+
+test("quote segments ignore typographic quotes and highlight ellipsis fragments in order", () => {
+  const text = "The Ukraine invasion of 2022 has led both Finland and Sweden to abandon decades of nonalignment. It\u2019s done.";
+  const plain = locateSegments(text, "It's done.");
+  assert.deepEqual(plain?.filter((s) => s.hit).map((s) => s.text), ["It\u2019s done."]);
+  const joined = locateSegments(text, "The Ukraine invasion... has led both Finland and Sweden");
+  assert.deepEqual(joined?.filter((s) => s.hit).map((s) => s.text), ["The Ukraine invasion", "has led both Finland and Sweden"]);
+  assert.equal(locateSegments(text, "Sweden... The Ukraine invasion"), null);
+  assert.equal(locateSegments(text, "not in the text"), null);
 });

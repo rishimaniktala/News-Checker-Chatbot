@@ -19,6 +19,13 @@ MONTHS.update({m.lower(): i for i, m in enumerate(calendar.month_abbr) if m})
 MONTH_YEAR = re.compile(r"\b(" + "|".join(MONTHS) + r")\.?\s+(?:\d{1,2}(?:st|nd|rd|th)?,?\s+)?((?:19|20)\d{2})\b", re.I)
 
 
+# A year only when it reads like one: after a preposition or "year", or in brackets. "2000 soldiers" is a count.
+YEAR_IN_CONTEXT = re.compile(
+    r"(?:\b(?:in|since|during|by|from|until|till|before|after|year|early|late|mid)\s+|\()((?:19|20)\d{2})\b(?!\s*(?:people|men|women|soldiers|troops|jobs|workers|deaths|cases|km|kg|dollars|euros|pounds|kronor))",
+    re.IGNORECASE,
+)
+
+
 def date_window(text: str, year_hint: str | None = None) -> tuple[str, str] | None:
     """Guardian date range: the named month padded by one month each side, else the named year."""
     m = MONTH_YEAR.search(text)
@@ -28,7 +35,7 @@ def date_window(text: str, year_hint: str | None = None) -> tuple[str, str] | No
         after = date(year + (month + 1) // 12, (month + 1) % 12 + 1, 1)
         start, end = first, after - timedelta(days=1)
         return start.isoformat(), end.isoformat()
-    year = (re.search(r"\b(?:19|20)\d{2}\b", text) or [None])[0] or year_hint
+    year = (YEAR_IN_CONTEXT.search(text) or [None, None])[1] or year_hint
     return (f"{year}-01-01", f"{year}-12-31") if year else None
 
 

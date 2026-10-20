@@ -6,7 +6,9 @@ Terms: keep only short passages (MAX_PASSAGE, 600 chars) as quoted evidence with
 link. Pages are never stored or republished.
 """
 
+import html
 import os
+import re
 from datetime import datetime
 from urllib.parse import urlsplit
 
@@ -52,6 +54,23 @@ def allowed_domains() -> set[str]:
 def site_name(url: str) -> str:
     host = (urlsplit(url).hostname or "").lower()
     return host.removeprefix("www.")
+
+
+def clean_markdown(text: str) -> str:
+    """Plain text from scraped markdown, so a quote of what a reader sees matches the passage word for word."""
+    text = html.unescape(text)
+    text = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", text)
+    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)
+    text = re.sub(r"(\*\*|__)(.+?)\1", r"\2", text)
+    text = re.sub(r"(?<![\w*])\*(?!\s)([^*\n]+?)(?<!\s)\*(?![\w*])", r"\1", text)
+    text = re.sub(r"`+", "", text)
+    lines = []
+    for line in text.splitlines():
+        if line.lstrip().startswith("|"):
+            continue
+        line = re.sub(r"^\s{0,3}(#{1,6}\s+|[-*+]\s+|>\s?)", "", line)
+        lines.append(line)
+    return "\n".join(lines)
 
 
 def _plain_url(url: str) -> bool:
@@ -102,7 +121,7 @@ def search(query: str, unavailable: list[str], client: httpx.Client | None = Non
         meta = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
         published = parse_time(meta.get("publishedTime") or meta.get("article:published_time") or meta.get("modifiedTime"))
         title = next((t for t in (item.get("title"), meta.get("title")) if isinstance(t, str) and t), site_name(url))
-        for passage in split_passages(markdown)[:max_passages]:
+        for passage in split_passages(clean_markdown(markdown))[:max_passages]:
             out.append({"url": url, "title": title, "published_at": published,
                         "passage": passage, "source_name": site_name(url)})
     return out

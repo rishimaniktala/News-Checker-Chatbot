@@ -25,7 +25,7 @@ from typing import Callable
 from . import llm
 from .agents import EvidenceDecision, check_evidence, extract_claims, give_review, give_verdict
 from .budget import RunBudget
-from .config import Settings, log_failure, redact
+from .config import Settings, log_failure
 from .judge import derive_label, more_conservative, reconcile
 from .prompts import PROMPT_VERSION
 from .rules import (

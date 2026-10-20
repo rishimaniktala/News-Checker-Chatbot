@@ -1,5 +1,5 @@
 import type { Citation, ClaimReport } from "@/lib/types";
-import { locateQuote } from "@/lib/quote";
+import { locateSegments } from "@/lib/quote";
 
 const STANCE = { supports: "＋ Supports", refutes: "－ Refutes", neutral: "· Context" } as const;
 
@@ -16,7 +16,7 @@ const when = (iso?: string | null) =>
 
 export default function Evidence({ claim, cite, index, anchor }: { claim: ClaimReport; cite: Citation; index: number; anchor?: string }) {
   const src = lookup(claim, cite);
-  const span = src ? locateQuote(src.text, cite.quote) : null;
+  const segments = src ? locateSegments(src.text, cite.quote) : null;
   const safe = src && /^https?:\/\//.test(src.url);
   return (
     <li id={anchor} className="rise scroll-mt-6 rounded-xl border border-rule bg-paper/50 p-4" style={{ ["--d" as string]: `${200 + index * 110}ms` }}>
@@ -34,7 +34,7 @@ export default function Evidence({ claim, cite, index, anchor }: { claim: ClaimR
         </p>
       )}
       <blockquote className="mt-2 border-l-[3px] border-accent/50 pl-3 text-[0.95rem] leading-relaxed text-ink/90">
-        {span ? (<>{span.before}<mark className="rounded-sm bg-mark px-0.5 font-medium text-ink">{span.match}</mark>{span.after}</>) : <em>{cite.quote}</em>}
+        {segments ? segments.map((g, i) => g.hit ? <mark key={i} className="rounded-sm bg-mark px-0.5 font-medium text-ink">{g.text}</mark> : <span key={i}>{g.text}</span>) : <em>{cite.quote}</em>}
       </blockquote>
     </li>
   );
