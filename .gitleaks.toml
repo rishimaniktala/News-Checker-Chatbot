@@ -4,5 +4,6 @@ title = "news-checker"
 useDefault = true
 
 [allowlist]
-description = "Example env file holds empty values only"
-paths = ['''\.env\.example$''', '''package-lock\.json$''']
+description = "Lockfile hashes and empty example values only"
+paths = ['''package-lock\.json$''']
+regexes = ['''(?i)(api[_-]?key|token)\s*=\s*$''']

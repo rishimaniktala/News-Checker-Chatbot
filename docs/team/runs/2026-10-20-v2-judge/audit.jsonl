@@ -5,3 +5,5 @@
 {"ts":"2026-10-20T12:25:06Z","run":"2026-10-20-v2-judge","actor":"lead","event":"report_received","detail":"ai"}
 {"ts":"2026-10-20T12:25:50Z","run":"2026-10-20-v2-judge","actor":"lead","event":"report_received","detail":"backend"}
 {"ts":"2026-10-20T12:26:13Z","run":"2026-10-20-v2-judge","actor":"lead","event":"scope_check","detail":"exit 1 only for owned-path overlap in my briefs: devops frontend/Dockerfile and frontend/.dockerignore sit inside frontend/**; devops alone created them. No file-level violation reported."}
+{"ts":"2026-10-20T12:35:06Z","run":"2026-10-20-v2-judge","actor":"lead","event":"report_received","detail":"security"}
+{"ts":"2026-10-20T12:39:36Z","run":"2026-10-20-v2-judge","actor":"lead","event":"report_received","detail":"qa"}

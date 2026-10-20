@@ -53,7 +53,6 @@ def test_dot_versions_cannot_escape_the_prompt_dir(version, tmp_path, monkeypatc
         prompts.load_prompt("extraction", version)
 
 
-@pytest.mark.xfail(strict=True, reason="SEC-2: the prompt name is not validated; '../..' in it escapes (name is code-controlled today)")
 def test_prompt_name_cannot_traverse(tmp_path, monkeypatch):
     root = tmp_path / "prompt_files"
     (root / "v2").mkdir(parents=True)

@@ -1,0 +1,6 @@
+# Report: security (v2 re-audit)
+DONE: four test files (prompts, injection, secrets, abuse), review of new surface, infra and dependency read-through. No app code touched.
+EVIDENCE (engineer's claim, lead to re-run): pytest 905 passed, 2 skipped, 28 xfailed (strict); own files: prompts 27/3, injection 72/17, secrets 23, abuse 60/7.
+FINDINGS: SEC-8 med web.py accepts https://evil.com\@reuters.com/ (backslash host); SEC-3 low review prompt split on first "\n\nReturn the verdict" (web title can break the evidence block); SEC-4 low claim.id unescaped in tag attribute; SEC-9 low evidence_ids unescaped in review prompt; SEC-7 low malformed 200 bodies from Firecrawl raise AttributeError; SEC-6 low chunked body uncapped; SEC-1 low prompt version regex accepts "." / ".."; SEC-2 info load_prompt name unvalidated; SEC-5 low cache key casefold merges Turkey/turkey; SEC-10 info non-numeric Content-Length. Infra: ci.yml no permissions block, actions pinned to tags, no dep audit, ruff unpinned; .gitleaks allowlists all of .env.example; base images by tag; requirements.lock carries pytest into runtime; RUNS_TOKEN empty by default.
+GAPS: no real uvicorn/proxy, no real Gemini/Firecrawl, no advisory lookup.
+BLOCKERS: none

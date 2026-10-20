@@ -20,6 +20,8 @@ def load_prompt(name: str, version: str | None = None) -> str:
     version = version or PROMPT_VERSION
     if not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.-]*", version):
         raise ValueError(f"bad prompt version {version!r}")
+    if not re.fullmatch(r"[a-z_]+", name):
+        raise ValueError(f"bad prompt name {name!r}")
     return (PROMPT_DIR / version / f"{name}.md").read_text(encoding="utf-8")
 
 
