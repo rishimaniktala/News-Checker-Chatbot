@@ -129,4 +129,15 @@ def test_consensus_confidence_drops_with_fallback_retry_and_disagreement():
     v, ev = _v2_case()
     base = compute_consensus(v, ev).final_confidence
     weaker = compute_consensus(v, ev, fallback_used=True, quote_first_try=False, judge_agreement=0.0)
-    assert weaker.final_confidence < base <= 0.70
+    assert weaker.final_confidence < base
+
+
+def test_one_outlet_stays_capped_but_two_independent_outlets_can_pass_the_cap():
+    from app.rules import CAP_SINGLE_SOURCE, compute_consensus
+    v, ev = _v2_case()
+    two = compute_consensus(v, ev)
+    assert not two.single_source and two.final_confidence > CAP_SINGLE_SOURCE
+    for item in ev.guardian:
+        item.source_name, item.url = "A", "https://alpha.example/" + item.id
+    one = compute_consensus(v, ev)
+    assert one.single_source and one.final_confidence <= CAP_SINGLE_SOURCE

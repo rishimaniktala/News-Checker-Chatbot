@@ -358,8 +358,11 @@ def compute_consensus(
         label = fc_label
 
     agreement = _agreement_ratio(label, verdict.citations)
+    from .retrievers.dedupe import count_independent  # dedupe -> rerank imports this module
+
     corroborated = fc_label == label and guardian_cited
-    single_source = not corroborated
+    independent = count_independent(evidence, cited_ids)
+    single_source = not corroborated and independent < 2
 
     if conflict:
         corroboration = 0.0
@@ -368,13 +371,11 @@ def compute_consensus(
     else:
         corroboration = 0.5
 
-    from .retrievers.dedupe import count_independent  # dedupe -> rerank imports this module
-
     fc_score = max((f.match_score for f in evidence.factchecks if f.normalized_label == label
                     and f.match_score >= FACTCHECK_MATCH_THRESHOLD), default=0.0)
     confidence, named = compute_confidence(
         evidence_strength=_evidence_strength(verdict, agreement, fc_score),
-        independent_sources=count_independent(evidence, cited_ids),
+        independent_sources=independent,
         corroboration=corroboration,
         quote_first_try=quote_first_try,
         judge_agreement=judge_agreement,

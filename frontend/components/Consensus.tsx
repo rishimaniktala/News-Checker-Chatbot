@@ -24,7 +24,7 @@ export default function Consensus({ ratio, cited, label, singleSource, conflict 
         </span>
         <span className="text-sm font-medium">{text}</span>
       </div>
-      {singleSource && <p className="mt-1 text-xs text-muted">Only one kind of source had usable evidence.</p>}
+      {singleSource && <p className="mt-1 text-xs text-muted">Only one outlet backs this up.</p>}
       {conflict && <p className="mt-1 text-xs font-medium text-warn">A published fact-check disagrees with the first read; we followed the fact-check.</p>}
     </div>
   );
