@@ -1,3 +1,4 @@
+import app.llm as llm
 import sys
 import types
 
@@ -92,7 +93,7 @@ def test_usage_reaches_budget(monkeypatch, seen_text, fake_inputs):
     budget = make_budget()
 
     def extract(inp):
-        agents._usage_sink.get()("m", 10, 5)
+        llm._usage_sink.get()("m", 10, 5)
         return ClaimExtraction(claims=[])
 
     monkeypatch.setattr(orchestrator, "extract_claims", extract)

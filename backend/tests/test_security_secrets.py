@@ -1,5 +1,6 @@
 """API keys must not appear in SSE events, stored runs, logs or user-facing errors."""
 
+import app.llm as llm
 import json
 import logging
 
@@ -176,7 +177,7 @@ def test_gemini_client_error_path_shows_fixed_message(monkeypatch):
             def generate_content(**kw):
                 raise RuntimeError(f"bad key {KEYS['GEMINI_API_KEY']}")
 
-    monkeypatch.setattr(agents, "_get_client", lambda: Boom)
+    monkeypatch.setattr(llm, "_get_client", lambda: Boom)
     resp = TestClient(main.app).post("/api/check", json={"kind": "text", "text": "hello"})
     errs = [e for e in sse(resp) if e["type"] == "error"]
     assert errs and errs[0]["message"] == main.INTERNAL_MESSAGE

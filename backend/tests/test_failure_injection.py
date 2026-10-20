@@ -4,6 +4,7 @@ Also holds the shared offline fakes (FakeGemini, mock sources, stream invariants
 test_weird_inputs, test_integration_fixtures and test_loop_properties import.
 """
 
+import app.llm as llm
 import json
 import re
 from collections import Counter
@@ -118,7 +119,7 @@ def offline(monkeypatch, tmp_path, sleeps):
 def install(monkeypatch, gemini, sources=None, search_fn=None):
     """Route agents to `gemini`. Search uses `sources` through the real search_fn, or `search_fn` directly.
     The real search_fn gets budget=None because of BUG-search-1 (see test_integration_fixtures)."""
-    monkeypatch.setattr(agents, "_get_client", lambda: gemini)
+    monkeypatch.setattr(llm, "_get_client", lambda: gemini)
     if search_fn is not None:
         monkeypatch.setattr(main, "make_search_fn", lambda settings, budget, **kw: search_fn)
     else:

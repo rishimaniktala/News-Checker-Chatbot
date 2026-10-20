@@ -1,5 +1,6 @@
 """Loop and cost caps hold when the fake model misbehaves forever. Real agents, real orchestrator."""
 
+import app.llm as llm
 import pytest
 
 from app import agents
@@ -20,7 +21,7 @@ CALL_COST = (1000 * 0.30 + 200 * 2.50) / 1_000_000
 @pytest.fixture
 def go(offline, monkeypatch):
     def run(gemini, evidence=search, cap=1.0):
-        monkeypatch.setattr(agents, "_get_client", lambda: gemini)
+        monkeypatch.setattr(llm, "_get_client", lambda: gemini)
         searches, events = [], []
 
         def counting(claim, queries, n):

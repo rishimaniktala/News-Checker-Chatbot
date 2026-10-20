@@ -1,5 +1,6 @@
 """Prompt injection: planted text must stay inside the delimited data blocks and never decide a verdict."""
 
+import app.llm as llm
 import json
 from datetime import date
 
@@ -142,7 +143,7 @@ def verdict_json(label="UNVERIFIABLE"):
 
 def test_judge_call_passes_no_tools_and_evidence_only_in_user_content(monkeypatch):
     fake = FakeClient(verdict_json())
-    monkeypatch.setattr(agents, "_get_client", lambda: fake)
+    monkeypatch.setattr(llm, "_get_client", lambda: fake)
     agents.give_verdict(claim(), evidence(passage=BAD), today=TODAY)
     contents, config = fake.models.calls[0]
     assert not config.tools
@@ -158,7 +159,7 @@ def test_extraction_and_check_calls_pass_no_tools(monkeypatch):
     for fn, reply in ((lambda: agents.extract_claims(NormalizedInput(input_type=InputType.TEXT, text=BAD), TODAY), ext),
                       (lambda: agents.check_evidence(claim(), evidence(passage=BAD), ["q"], TODAY), chk)):
         fake = FakeClient(reply)
-        monkeypatch.setattr(agents, "_get_client", lambda: fake)
+        monkeypatch.setattr(llm, "_get_client", lambda: fake)
         fn()
         _, config = fake.models.calls[0]
         assert not config.tools and not config.tool_config

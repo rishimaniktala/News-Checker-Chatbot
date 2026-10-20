@@ -1,5 +1,6 @@
 """Regression tests for the reviewer's must-fix findings (R1-R7)."""
 
+import app.llm as llm
 from datetime import datetime
 from types import SimpleNamespace
 
@@ -44,12 +45,12 @@ def test_r2_long_factcheck_containing_every_claim_word_does_not_score_high():
 
 def test_r3_thinking_tokens_are_billed_as_output():
     usage = SimpleNamespace(candidates_token_count=100, thoughts_token_count=400)
-    assert agents._billed_output_tokens(usage) == 500
-    assert agents._billed_output_tokens(SimpleNamespace(candidates_token_count=None)) == 0
+    assert llm._billed_output_tokens(usage) == 500
+    assert llm._billed_output_tokens(SimpleNamespace(candidates_token_count=None)) == 0
 
 
 def test_r4_thinking_config_follows_the_model():
-    assert agents._thinking_config("gemini-2.5-flash").thinking_budget == 512
+    assert llm._thinking_config("gemini-2.5-flash").thinking_budget == 512
 
 
 def test_r5_bad_settings_still_end_the_stream(monkeypatch):

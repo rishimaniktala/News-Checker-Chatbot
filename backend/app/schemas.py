@@ -53,6 +53,21 @@ class CitationFailure(str, Enum):
     LINK_DEAD = "link_dead"
 
 
+class ComponentKind(str, Enum):
+    ACTOR = "actor"  # who
+    ACTION = "action"  # what happened
+    TIME = "time"  # when
+    QUANTITY = "quantity"  # how many / how much
+    PLACE = "place"  # where
+    OTHER = "other"
+
+
+class ComponentStatus(str, Enum):
+    SUPPORTED = "supported"
+    CONTRADICTED = "contradicted"
+    UNKNOWN = "unknown"  # the evidence does not address this part
+
+
 class Step(str, Enum):
     NORMALIZE = "normalize"
     EXTRACT = "extract_claims"
@@ -60,6 +75,7 @@ class Step(str, Enum):
     VERDICT = "verdict"
     VALIDATE = "validate"
     CONSENSUS = "consensus"
+    REVIEW = "second_opinion"
     DONE = "done"
 
 
@@ -198,6 +214,16 @@ class Citation(BaseModel):
     stance: Stance
 
 
+class ComponentCheck(BaseModel):
+    """One checkable part of a claim and what the evidence says about it."""
+
+    name: str = Field(max_length=160, description="The part, e.g. 'Sweden joined NATO' or 'in 2024'.")
+    kind: ComponentKind = ComponentKind.OTHER
+    status: ComponentStatus
+    evidence_ids: list[str] = Field(default_factory=list, description="Evidence ids that settle this part.")
+    note: Optional[str] = Field(default=None, max_length=200)
+
+
 class ClaimVerdict(BaseModel):
     """[LLM OUTPUT] Verdict step."""
 
@@ -215,6 +241,7 @@ class ClaimVerdict(BaseModel):
         "dates and numbers. For FALSE/MISLEADING, state the correct version explicitly.",
     )
     citations: list[Citation] = Field(default_factory=list)
+    components: list[ComponentCheck] = Field(default_factory=list, max_length=6)
 
     @model_validator(mode="after")
     def _non_unverifiable_needs_citations(self):
@@ -285,6 +312,15 @@ class ClaimReport(BaseModel):
     )
     consensus: ConsensusResult
     attempts: int = Field(ge=1, le=3)
+    components: list[ComponentCheck] = Field(default_factory=list)
+    model_used: Optional[str] = Field(default=None, description="Model that produced the verdict.")
+    fallback_used: bool = Field(default=False, description="True if any call fell back to the secondary model.")
+    independent_sources: Optional[int] = Field(
+        default=None, description="Distinct outlets among the cited evidence, syndicated copies collapsed."
+    )
+    confidence_factors: dict[str, float] = Field(
+        default_factory=dict, description="Named 0..1 inputs behind `confidence`, for the UI."
+    )
 
 
 class FinalReport(BaseModel):
@@ -299,6 +335,8 @@ class FinalReport(BaseModel):
     answer: str = Field(
         description="Combined plain-language reply to the whole input; per-claim answers joined by code."
     )
+    prompt_version: Optional[str] = None
+    models_used: list[str] = Field(default_factory=list)
     disclaimer: str = (
         "Verdicts reflect what The Guardian and published fact-checks report, "
         "not independently established truth."

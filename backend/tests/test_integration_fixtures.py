@@ -1,5 +1,6 @@
 """Real search_fn (Guardian + Fact Check clients, rerank) on recorded-shape fixtures, fake LLM, real run_check."""
 
+import app.llm as llm
 import json
 import re
 from pathlib import Path
@@ -43,7 +44,7 @@ def gemini():
 
 
 def run(monkeypatch, budget_for_search):
-    monkeypatch.setattr(agents, "_get_client", lambda: gemini())
+    monkeypatch.setattr(llm, "_get_client", lambda: gemini())
     budget = RunBudget(0.05, 3)
     search_fn = make_search_fn(SETTINGS, budget if budget_for_search else None, client=fixture_client())
     events = []
