@@ -8,7 +8,6 @@ from datetime import date, timedelta
 
 import httpx
 
-from ..budget import RunBudget
 from ..config import Settings
 from ..schemas import Claim, RankedEvidence
 from . import factcheck, guardian, web
@@ -44,7 +43,6 @@ SearchFn = Callable[[Claim, list[str], int], RankedEvidence]
 
 def make_search_fn(
     settings: Settings,
-    budget: RunBudget | None = None,  # unused: the orchestrator owns repeat-query blocking
     embed_fn: EmbedFn | None = None,
     client: httpx.Client | None = None,
 ) -> SearchFn:

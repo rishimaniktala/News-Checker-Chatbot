@@ -45,7 +45,7 @@ def client(guardian_status=200):
 
 def test_fixtures_parse_into_ranked_evidence():
     c, _ = client()
-    fn = make_search_fn(settings(("guardian", "factcheck")), RunBudget(1, 3), client=c)
+    fn = make_search_fn(settings(("guardian", "factcheck")), client=c)
     ev = fn(CLAIM, CLAIM.search_queries, 2)
     assert isinstance(ev, RankedEvidence) and ev.attempt == 2
     assert ev.guardian[0].id == "E1" and "5.25%" in ev.guardian[0].passage

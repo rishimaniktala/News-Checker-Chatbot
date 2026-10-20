@@ -94,7 +94,7 @@ def v2(offline, monkeypatch):
     def go(gemini, search_fn=None, body=None):
         monkeypatch.setattr(llm, "_get_client", lambda: gemini)
         sfn = search_fn or fixed_search()
-        monkeypatch.setattr(main, "make_search_fn", lambda settings, budget, **kw: sfn)
+        monkeypatch.setattr(main, "make_search_fn", lambda settings, **kw: sfn)
         return post(body or {"kind": "text", "text": "Sweden banned cash."})
     return go
 

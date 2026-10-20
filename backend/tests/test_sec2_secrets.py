@@ -93,7 +93,7 @@ def sse(resp):
 
 def post(monkeypatch, fake, headers=None, search=evidence_search):
     monkeypatch.setattr(llm, "_get_client", lambda: fake)
-    monkeypatch.setattr(main, "make_search_fn", lambda settings, budget, **kw: search)
+    monkeypatch.setattr(main, "make_search_fn", lambda settings, **kw: search)
     client = TestClient(main.app)
     resp = client.post("/api/check", json={"kind": "text", "text": "Sweden banned cash."}, headers=headers or {})
     return client, resp, sse(resp)
@@ -170,7 +170,7 @@ def test_web_source_errors_do_not_echo_the_request(monkeypatch, json_log):
     monkeypatch.setattr(orchestrator, "extract_claims", lambda inp: ClaimExtraction(claims=[make_claim()], notes="n"))
     monkeypatch.setattr(orchestrator, "check_evidence", lambda c, e, tried: EvidenceCheck(
         claim_id=c.id, decision=EvidenceDecision.INSUFFICIENT, reason="r"))
-    search = lambda settings, budget, **kw: make_search_fn(settings, budget, client=client_web)  # noqa: E731
+    search = lambda settings, **kw: make_search_fn(settings, client=client_web)  # noqa: E731
     monkeypatch.setattr(llm, "_get_client", lambda: FakeClient(lambda r, m: False))
     monkeypatch.setattr(main, "make_search_fn", search)
     client = TestClient(main.app)

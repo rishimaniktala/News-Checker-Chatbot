@@ -46,7 +46,7 @@ def gemini():
 def run(monkeypatch, budget_for_search):
     monkeypatch.setattr(llm, "_get_client", lambda: gemini())
     budget = RunBudget(0.05, 3)
-    search_fn = make_search_fn(SETTINGS, budget if budget_for_search else None, client=fixture_client())
+    search_fn = make_search_fn(SETTINGS, client=fixture_client())
     events = []
     return run_check(dict(REQ), events.append, SETTINGS, search_fn, budget), events
 

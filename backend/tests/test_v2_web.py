@@ -172,7 +172,7 @@ def pipeline(offline, monkeypatch, web_env):
         gemini = gemini or V2Gemini()
         monkeypatch.setattr(llm, "_get_client", lambda: gemini)
         monkeypatch.setattr(main, "make_search_fn",
-                            lambda settings, budget, **kw: make_search_fn(settings, None, client=net.client))
+                            lambda settings, **kw: make_search_fn(settings, client=net.client))
         return post({"kind": "text", "text": text})
     return go
 

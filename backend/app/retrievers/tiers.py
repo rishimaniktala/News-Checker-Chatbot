@@ -14,9 +14,6 @@ TIER2 = {"snopes.com", "politifact.com", "factcheck.org", "fullfact.org", "afpfa
          "boomlive.in", "washingtonpost.com", "nytimes.com", "economist.com", "ft.com", "bloomberg.com",
          "theatlantic.com", "aljazeera.com", "euronews.com", "thehindu.com", "indianexpress.com"}
 TIER_BONUS = {1: 0.03, 2: 0.015, 3: 0.0}
-FACTCHECK_DOMAINS = {"snopes.com", "politifact.com", "factcheck.org", "fullfact.org", "afpfactcheck.com",
-                     "misbar.com", "boomlive.in"}
-
 
 def host_of(url: str) -> str:
     return (urlsplit(url).hostname or "").lower().removeprefix("www.")

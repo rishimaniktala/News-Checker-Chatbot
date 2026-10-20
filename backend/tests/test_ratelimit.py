@@ -12,7 +12,7 @@ BODY = {"kind": "text", "text": "hello"}
 
 @pytest.fixture
 def client(monkeypatch):
-    monkeypatch.setattr(main, "make_search_fn", lambda settings, budget, **kw: search)
+    monkeypatch.setattr(main, "make_search_fn", lambda settings, **kw: search)
     monkeypatch.setattr(orchestrator, "extract_claims", lambda inp: ClaimExtraction(claims=[], notes="n"))
     return TestClient(main.app)
 

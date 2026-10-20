@@ -18,7 +18,7 @@ def client(monkeypatch):
         calls.append(inp.text)
         return ClaimExtraction(claims=[], notes="n")
 
-    monkeypatch.setattr(main, "make_search_fn", lambda settings, budget, **kw: search)
+    monkeypatch.setattr(main, "make_search_fn", lambda settings, **kw: search)
     monkeypatch.setattr(orchestrator, "extract_claims", extract)
     c = TestClient(main.app)
     c.calls = calls

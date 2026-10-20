@@ -7,7 +7,7 @@ import re
 from datetime import date
 import unicodedata
 from decimal import Decimal
-from typing import Callable, Optional
+from typing import Optional
 
 from .confidence import compute_confidence
 from .schemas import (
@@ -90,16 +90,12 @@ def validate_verdict(
     verdict: ClaimVerdict,
     evidence: RankedEvidence,
     attempt: int,
-    link_is_alive: Optional[Callable[[str], bool]] = None,
 ) -> ValidationResult:
-    """Check every citation: id exists, quote is verbatim, link resolves.
+    """Check every citation: id exists and quote is verbatim.
 
-    link_is_alive: injected by the caller (e.g. an HTTP HEAD check). If None,
-    the link check is skipped. Each URL is checked at most once.
     """
     sources = _quotable_texts(evidence)
     failures: list[FailedCitation] = []
-    link_cache: dict[str, bool] = {}
 
     for c in verdict.citations:
         if c.evidence_id not in sources:
@@ -110,11 +106,6 @@ def validate_verdict(
         if not quote or not any(_quote_in(quote, t) for t in texts):
             failures.append(_fail(c, CitationFailure.QUOTE_NOT_FOUND))
             continue
-        if link_is_alive is not None:
-            if url not in link_cache:
-                link_cache[url] = link_is_alive(url)
-            if not link_cache[url]:
-                failures.append(_fail(c, CitationFailure.LINK_DEAD))
 
     return ValidationResult(
         claim_id=verdict.claim_id,
@@ -203,10 +194,6 @@ def check_rationale(verdict: ClaimVerdict, evidence: RankedEvidence, claim_text:
     if verdict.label != VerdictLabel.UNVERIFIABLE and not any(c.quote.strip() for c in verdict.citations):
         problems.append("non-UNVERIFIABLE verdict has no citation with a quote")
     return problems
-
-
-def should_retry(validation: ValidationResult) -> bool:
-    return not validation.passed and validation.attempt < MAX_ATTEMPTS
 
 
 # --------------------------------------------------- rating normalization

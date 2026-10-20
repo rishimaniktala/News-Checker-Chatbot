@@ -29,7 +29,7 @@ def real_search(v2, monkeypatch):
     def go(net, gemini, text):
         monkeypatch.setattr(llm, "_get_client", lambda: gemini)
         monkeypatch.setattr(main, "make_search_fn",
-                            lambda settings, budget, **kw: make_search_fn(settings, None, client=net.client))
+                            lambda settings, **kw: make_search_fn(settings, client=net.client))
         return post({"kind": "text", "text": text})
     return go
 
@@ -113,7 +113,7 @@ def test_the_real_musk_google_pair_scores_below_the_match_threshold(v2, monkeypa
                           "claimReview": [{"url": "https://snopes.com/x", "textualRating": "False", "publisher": {"name": "Snopes"}}]}])
     monkeypatch.setenv("SOURCES", "guardian,factcheck")
     monkeypatch.setattr(llm, "_get_client", lambda: V2Gemini(extract=MUSK, judge=MUSK_TRUE, verify=sees_factcheck()))
-    monkeypatch.setattr(main, "make_search_fn", lambda settings, budget, **kw: make_search_fn(settings, None, client=net.client))
+    monkeypatch.setattr(main, "make_search_fn", lambda settings, **kw: make_search_fn(settings, client=net.client))
     claim = claim_of(post({"kind": "text", "text": "Elon Musk bought Twitter."}))
     scores = [f["match_score"] for f in claim["evidence"]["factchecks"]]
     assert scores and max(scores) < 0.85 and claim["label"] == "TRUE"

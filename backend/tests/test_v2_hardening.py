@@ -25,7 +25,7 @@ def api(offline, monkeypatch):
     monkeypatch.setenv("CACHE_TTL_HOURS", "0")
     gemini = V2Gemini()
     monkeypatch.setattr(llm, "_get_client", lambda: gemini)
-    monkeypatch.setattr(main, "make_search_fn", lambda settings, budget, **kw: fixed_search())
+    monkeypatch.setattr(main, "make_search_fn", lambda settings, **kw: fixed_search())
     client = TestClient(main.app)
     client.gemini = gemini
     return client

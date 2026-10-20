@@ -42,11 +42,6 @@ class TimeSensitivity(str, Enum):
     BREAKING = "breaking"  # unfolding now, evidence may be stale
 
 
-class EvidenceOrigin(str, Enum):
-    GUARDIAN = "guardian"
-    FACTCHECK = "factcheck"
-
-
 class CitationFailure(str, Enum):
     UNKNOWN_EVIDENCE_ID = "unknown_evidence_id"
     QUOTE_NOT_FOUND = "quote_not_found"

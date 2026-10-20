@@ -121,10 +121,10 @@ def install(monkeypatch, gemini, sources=None, search_fn=None):
     The real search_fn gets budget=None because of BUG-search-1 (see test_integration_fixtures)."""
     monkeypatch.setattr(llm, "_get_client", lambda: gemini)
     if search_fn is not None:
-        monkeypatch.setattr(main, "make_search_fn", lambda settings, budget, **kw: search_fn)
+        monkeypatch.setattr(main, "make_search_fn", lambda settings, **kw: search_fn)
     else:
         monkeypatch.setattr(main, "make_search_fn",
-                            lambda settings, budget, **kw: make_search_fn(settings, None, client=sources.client))
+                            lambda settings, **kw: make_search_fn(settings, client=sources.client))
 
 
 def post(body, cap=0.05):

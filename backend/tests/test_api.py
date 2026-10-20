@@ -12,7 +12,7 @@ from test_orchestrator import extraction, make_claim, search
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setenv("NEWS_DB", str(tmp_path / "api.db"))
-    monkeypatch.setattr(main, "make_search_fn", lambda settings, budget, **kw: search)
+    monkeypatch.setattr(main, "make_search_fn", lambda settings, **kw: search)
     return TestClient(main.app)
 
 
