@@ -113,3 +113,38 @@ test("pipeline stages follow the furthest step reached", () => {
   assert.equal(stageStates([{ step: "verdict" }], "error")[3], "failed");
   assert.ok(stageStates([{ step: "normalize" }], "done").every((s) => s === "done"));
 });
+
+import { componentSummary, factorName, factorRows, parseRetryAfter, rateLimitMessage } from "./report.ts";
+import { HIGH_CONFIDENCE, MEDIUM_CONFIDENCE } from "./labels.ts";
+import { STEP_NAME } from "./pipeline.ts";
+
+test("components: summary counts and skips zero groups", () => {
+  const p = (status: "supported" | "contradicted" | "unknown") => ({ name: "x", kind: "other" as const, status, evidence_ids: [] });
+  assert.equal(componentSummary([p("supported"), p("supported"), p("unknown")]), "3 parts: 2 supported, 1 not found");
+  assert.equal(componentSummary([p("contradicted")]), "1 part: 1 contradicted");
+});
+
+test("factors: known keys get plain names, unknown are humanised, values clamped, junk dropped", () => {
+  assert.equal(factorName("quotes_verified"), "Quotes verified");
+  assert.equal(factorName("source_age"), "Source age");
+  const rows = factorRows({ model_quality: 1.4, judge_agreement: Number.NaN, quotes_verified: 0.5 });
+  assert.deepEqual(rows.map((r) => [r.name, r.value]), [["Model quality", 1], ["Quotes verified", 0.5]]);
+  assert.deepEqual(factorRows(undefined), []);
+});
+
+test("retry-after: seconds parsed, bad values ignored", () => {
+  assert.equal(parseRetryAfter("12"), 12);
+  assert.equal(parseRetryAfter("0"), null);
+  assert.equal(parseRetryAfter("Wed, 21 Oct 2026 07:28:00 GMT"), null);
+  assert.equal(parseRetryAfter(null), null);
+  assert.equal(rateLimitMessage("30"), "Too many checks at once, try again in 30 seconds.");
+  assert.equal(rateLimitMessage("1"), "Too many checks at once, try again in 1 second.");
+  assert.equal(rateLimitMessage("x"), "Too many checks at once, try again in a moment.");
+});
+
+test("labels: cutoffs are exported and applied", () => {
+  assert.equal(confidenceLabel(HIGH_CONFIDENCE), "High");
+  assert.equal(confidenceLabel(MEDIUM_CONFIDENCE), "Medium");
+  assert.equal(confidenceLabel(MEDIUM_CONFIDENCE - 0.01), "Low");
+  assert.equal(STEP_NAME.second_opinion, "Getting a second opinion");
+});

@@ -3,12 +3,15 @@ import { useState } from "react";
 import { API_BASE } from "@/lib/stream";
 import type { DoneEvent } from "@/lib/types";
 
-export default function Receipt({ done }: { done: DoneEvent }) {
+export default function Receipt({ done, models, promptVersion }: { done: DoneEvent; models?: string[]; promptVersion?: string | null }) {
+  const used = models?.length ? models : done.models_used;
   const [copied, setCopied] = useState(false);
   const chips: [string, string][] = [
     ["Cost", `$${done.cost_usd.toFixed(4)}`],
     ["Time", `${(done.latency_ms / 1000).toFixed(1)} s`],
     ["Tokens", `${done.tokens_in} in / ${done.tokens_out} out`],
+    ...(used?.length ? [["Models", used.join(", ")] as [string, string]] : []),
+    ...(promptVersion ? [["Prompt", promptVersion] as [string, string]] : []),
   ];
   async function copy() {
     try {

@@ -23,5 +23,6 @@ export const STEP_NAME: Record<string, string> = {
   retrieve: "Searching sources",
   verdict: "Judging",
   validate: "Checking the quotes",
+  second_opinion: "Getting a second opinion",
   consensus: "Cross-checking",
 };

@@ -1,5 +1,6 @@
 // Mock of POST /api/check for UI work. Scenario is picked from the input text:
 //   "error" -> error event, "fourth primary" -> not enough evidence,
+//   "429" -> HTTP 429 with Retry-After, "second opinion" -> components, fallback model, second-opinion step,
 //   "shut down" -> contradicted (with a validator retry), anything else -> supported.
 import http from "node:http";
 
@@ -61,6 +62,20 @@ function scenario(text) {
     const c = claimReport("UNVERIFIABLE", 0.3, "A man in Ohio invented a fourth primary colour.", "I couldn't confirm this.", "No article or fact-check covers this claim, so there is nothing to base a verdict on.", [], { claim_id: "c1", guardian: [], factchecks: [] }, 0);
     return [...steps(false).slice(0, 6), [300, trace("verdict", "started", "Asking the model for a verdict", "c1")], [600, trace("verdict", "completed", "No usable evidence", "c1")], [300, { type: "verdict", report: finalReport(c, "I couldn't confirm this.") }], [100, done]];
   }
+  if (t.includes("second opinion")) {
+    const c = claimReport("MISLEADING", 0.58, "Sweden joined NATO in 2023.", "Partly. Sweden joined NATO, but in 2024, not 2023.", "The Guardian dates the accession to 7 March 2024.", [{ evidence_id: "E1", quote: "became the 32nd member of NATO on 7 March 2024", stance: "refutes" }], { claim_id: "c1", guardian: [guardian], factchecks: [] }, 0.5);
+    Object.assign(c, {
+      components: [
+        { name: "Sweden joined NATO", kind: "action", status: "supported", evidence_ids: ["E1"], note: "The Guardian reports the accession." },
+        { name: "in 2023", kind: "time", status: "contradicted", evidence_ids: ["E1"], note: "It happened in March 2024." },
+        { name: "as the 32nd member", kind: "quantity", status: "unknown", evidence_ids: [], note: null },
+      ],
+      model_used: "gemini-3.5-flash-lite", fallback_used: true, independent_sources: 1,
+      confidence_factors: { independent_sources: 0.35, quotes_verified: 1, factcheck_agreement: 0.5, judge_agreement: 0.6, model_quality: 0.4 },
+    });
+    const report = { ...finalReport(c, c.answer), prompt_version: "v2.1", models_used: ["gemini-3.6-flash", "gemini-3.5-flash-lite"] };
+    return [...steps(false).slice(0, 14), [300, trace("second_opinion", "started", "Asking a second model", "c1")], [800, trace("second_opinion", "completed", "Second opinion agrees", "c1")], [300, { type: "verdict", report }], [100, { ...done, cached: true, models_used: report.models_used, fallback_used: true }]];
+  }
   if (t.includes("shut down")) {
     const c = claimReport("FALSE", 0.88, "Anthropic has shut down.", "No, Anthropic has not shut down.", "A published fact-check rates this claim False.", [{ evidence_id: "F1", quote: "Anthropic has shut down.", stance: "refutes" }], { claim_id: "c1", guardian: [], factchecks: [factcheck] }, 1);
     return [...steps(true), [300, { type: "verdict", report: finalReport(c, "No, Anthropic has not shut down.") }], [100, done]];
@@ -85,6 +100,7 @@ http.createServer(async (req, res) => {
   let input;
   try { input = JSON.parse(body); } catch { input = {}; }
   const text = input.text ?? input.url ?? (input.kind === "image" ? "image" : "");
+  if (text.toLowerCase().includes("429")) return res.writeHead(429, { "Content-Type": "application/json", "Retry-After": "17", "Access-Control-Expose-Headers": "Retry-After" }).end('{"detail":"rate limited"}');
   res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" });
   let open = true;
   res.on("close", () => (open = false));

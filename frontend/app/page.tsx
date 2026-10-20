@@ -29,8 +29,9 @@ export default function Page() {
         if (event.type === "done") finished = true;
       }
       if (!finished) dispatch({ type: "fail", message: "The connection closed before the check finished. Please try again." });
-    } catch {
+    } catch (err) {
       if (timedOut) dispatch({ type: "fail", message: "The check took too long. Please try again." });
+      else if (!ctrl.signal.aborted && err instanceof Error && err.message.startsWith("Too many")) dispatch({ type: "fail", message: err.message });
       else if (!ctrl.signal.aborted) dispatch({ type: "fail", message: "Could not reach the server. Check your connection and try again." });
     } finally {
       clearTimeout(timer);
@@ -68,7 +69,7 @@ export default function Page() {
               )}
               {state.report && <Verdict report={state.report} />}
               {!state.report && running && <Skeleton />}
-              {state.done && <Receipt done={state.done} />}
+              {state.done && <Receipt done={state.done} models={state.report?.models_used} promptVersion={state.report?.prompt_version} />}
             </div>
             <div className="lg:sticky lg:top-6">
               <Trace lines={state.trace} running={running} />

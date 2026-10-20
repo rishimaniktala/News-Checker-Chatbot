@@ -1,7 +1,10 @@
 import type { Label } from "./types.ts";
 
+export const HIGH_CONFIDENCE = 0.75;
+export const MEDIUM_CONFIDENCE = 0.5;
+
 export function confidenceLabel(c: number): "High" | "Medium" | "Low" {
-  return c >= 0.75 ? "High" : c >= 0.5 ? "Medium" : "Low";
+  return c >= HIGH_CONFIDENCE ? "High" : c >= MEDIUM_CONFIDENCE ? "Medium" : "Low";
 }
 
 export const LABEL_TEXT: Record<Label, string> = {

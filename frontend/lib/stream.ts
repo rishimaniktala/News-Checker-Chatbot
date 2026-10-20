@@ -1,4 +1,5 @@
 import { parseSse } from "./sse.ts";
+import { rateLimitMessage } from "./report.ts";
 import type { CheckRequest, SseEvent } from "./types.ts";
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
@@ -11,6 +12,7 @@ export async function* streamCheck(req: CheckRequest, signal: AbortSignal): Asyn
     body: JSON.stringify(req),
     signal,
   });
+  if (res.status === 429) throw new Error(rateLimitMessage(res.headers.get("Retry-After")));
   if (!res.ok || !res.body) throw new Error(`The server answered with status ${res.status}.`);
   const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
   let rest = "";

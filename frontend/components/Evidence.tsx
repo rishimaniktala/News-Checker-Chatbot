@@ -14,12 +14,12 @@ function lookup(c: ClaimReport, cite: Citation) {
 const when = (iso?: string | null) =>
   iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : null;
 
-export default function Evidence({ claim, cite, index }: { claim: ClaimReport; cite: Citation; index: number }) {
+export default function Evidence({ claim, cite, index, anchor }: { claim: ClaimReport; cite: Citation; index: number; anchor?: string }) {
   const src = lookup(claim, cite);
   const span = src ? locateQuote(src.text, cite.quote) : null;
   const safe = src && /^https?:\/\//.test(src.url);
   return (
-    <li className="rise rounded-xl border border-rule bg-paper/50 p-4" style={{ ["--d" as string]: `${200 + index * 110}ms` }}>
+    <li id={anchor} className="rise scroll-mt-6 rounded-xl border border-rule bg-paper/50 p-4" style={{ ["--d" as string]: `${200 + index * 110}ms` }}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs text-muted">
         <span className="font-mono uppercase tracking-wider">{src ? `${src.kind} · ${src.name}` : `Source ${cite.evidence_id}`}{when(src?.date) ? ` · ${when(src?.date)}` : ""}</span>
         <span className="font-medium text-ink">{STANCE[cite.stance]}</span>

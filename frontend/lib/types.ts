@@ -24,6 +24,16 @@ export interface FactCheckReview {
   raw_rating: string;
 }
 
+export type ComponentStatus = "supported" | "contradicted" | "unknown";
+
+export interface ComponentCheck {
+  name: string;
+  kind: "actor" | "action" | "time" | "quantity" | "place" | "other";
+  status: ComponentStatus;
+  evidence_ids: string[];
+  note?: string | null;
+}
+
 export interface ClaimReport {
   claim: { id: string; text: string };
   label: Label;
@@ -38,6 +48,11 @@ export interface ClaimReport {
     conflict: boolean;
     notes?: string | null;
   };
+  components?: ComponentCheck[];
+  model_used?: string | null;
+  fallback_used?: boolean;
+  independent_sources?: number | null;
+  confidence_factors?: Record<string, number>;
 }
 
 export interface FinalReport {
@@ -48,6 +63,8 @@ export interface FinalReport {
   skipped_claims: { id: string; text: string; skip_reason?: string | null }[];
   answer: string;
   disclaimer: string;
+  prompt_version?: string | null;
+  models_used?: string[];
 }
 
 export interface TraceEvent {
@@ -67,6 +84,8 @@ export interface DoneEvent {
   tokens_in: number;
   tokens_out: number;
   cached: boolean;
+  models_used?: string[];
+  fallback_used?: boolean;
 }
 
 export type SseEvent =
