@@ -305,6 +305,9 @@ def _evidence_strength(verdict: ClaimVerdict, agreement: float, fc_score: float)
     comps = verdict.components
     if not comps:
         return 0.5 * agreement
+    wanted = {VerdictLabel.TRUE: Stance.SUPPORTS, VerdictLabel.FALSE: Stance.REFUTES}.get(verdict.label)
+    if wanted and not any(c.stance == wanted for c in verdict.citations):
+        return 0.0
     cited = {c.evidence_id for c in verdict.citations}
     settled = sum(c.status != ComponentStatus.UNKNOWN and bool(set(c.evidence_ids) & cited) for c in comps)
     return max(settled / len(comps), fc_score)

@@ -1,6 +1,6 @@
 """Pure-code checks on the judge's output: the label its components imply, and whether its ids hold up."""
 
-from .schemas import ClaimVerdict, ComponentCheck, ComponentStatus, RankedEvidence, VerdictLabel
+from .schemas import ClaimVerdict, ComponentCheck, ComponentStatus, RankedEvidence, Stance, VerdictLabel
 
 _COMMITTAL = {VerdictLabel.TRUE: 2, VerdictLabel.FALSE: 2, VerdictLabel.MISLEADING: 1, VerdictLabel.UNVERIFIABLE: 0}
 
@@ -48,4 +48,7 @@ def reconcile(verdict: ClaimVerdict, evidence: RankedEvidence) -> list[str]:
             problems.append(f'component "{c.name}" relies on {", ".join(missing)}, which has no citation')
     if verdict.label in (VerdictLabel.TRUE, VerdictLabel.FALSE) and not settled:
         problems.append(f"label {verdict.label.value} has no supported or contradicted component behind it")
+    wanted = {VerdictLabel.TRUE: Stance.SUPPORTS, VerdictLabel.FALSE: Stance.REFUTES}.get(verdict.label)
+    if wanted and verdict.citations and not any(c.stance == wanted for c in verdict.citations):
+        problems.append(f"label {verdict.label.value} has no citation that {wanted.value} the claim")
     return problems

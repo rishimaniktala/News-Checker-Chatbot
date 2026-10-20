@@ -18,7 +18,7 @@ PROMPT_DIR = Path(__file__).resolve().parent / "prompt_files"
 def load_prompt(name: str, version: str | None = None) -> str:
     """Text of prompt_files/<version>/<name>.md; unknown versions fail at import, not mid-run."""
     version = version or PROMPT_VERSION
-    if not re.fullmatch(r"[A-Za-z0-9_.-]+", version):
+    if not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.-]*", version):
         raise ValueError(f"bad prompt version {version!r}")
     return (PROMPT_DIR / version / f"{name}.md").read_text(encoding="utf-8")
 
@@ -70,6 +70,11 @@ def neutralize(text: str) -> str:
 _neutralize = neutralize
 
 
+def _safe_id(claim_id: str) -> str:
+    """Claim ids come from model output and sit inside a tag attribute, so keep only safe characters."""
+    return re.sub(r"[^A-Za-z0-9_-]", "", claim_id)[:16] or "c1"
+
+
 def _outlet(name: str) -> str:
     return "Guardian" if name == "The Guardian" else _neutralize(name)
 
@@ -87,7 +92,7 @@ def build_verdict_user_prompt(
     today = today or date.today()
     parts = [
         f"Today's date: {today.isoformat()}",
-        f'<claim id="{claim.id}" time_sensitivity="{claim.time_sensitivity.value}">',
+        f'<claim id="{_safe_id(claim.id)}" time_sensitivity="{claim.time_sensitivity.value}">',
         _neutralize(claim.text),
         "</claim>",
         "",
@@ -124,7 +129,7 @@ def build_verdict_user_prompt(
             "Fix these. Quote only exact text from the evidence above, or choose UNVERIFIABLE if no valid quote supports a verdict.",
         ]
 
-    parts += ["", f'Return the verdict for claim_id "{claim.id}".']
+    parts += ["", f'Return the verdict for claim_id "{_safe_id(claim.id)}".']
     return "\n".join(parts)
 
 
@@ -134,12 +139,13 @@ def build_review_user_prompt(
     first: ClaimVerdict,
     derived_label: str,
     today: date | None = None,
+    problems: list[str] | None = None,
 ) -> str:
     """User message for the second-opinion call: the verdict prompt plus the first verdict and the label its components imply."""
     base = build_verdict_user_prompt(claim, evidence, today)
-    head, _, tail = base.partition("\n\nReturn the verdict")
+    head, _, tail = base.rpartition("\n\nReturn the verdict")
     components = [
-        f"- {_neutralize(c.name)} [{c.kind.value}]: {c.status.value}; ids: {', '.join(c.evidence_ids) or 'none'}"
+        f"- {_neutralize(c.name)} [{c.kind.value}]: {c.status.value}; ids: {_neutralize(', '.join(c.evidence_ids)) or 'none'}"
         for c in first.components
     ] or ["- (none)"]
     return "\n".join([
@@ -150,5 +156,6 @@ def build_review_user_prompt(
         "components:", *components,
         "</first_verdict>", "",
         f"The components imply {derived_label}, but the first label was {first.label.value}. Decide which is right and correct the verdict.",
-        f'Return the verdict for claim_id "{claim.id}".',
+        *([f"Problems found: {_neutralize('; '.join(problems))}"] if problems else []),
+        f'Return the verdict for claim_id "{_safe_id(claim.id)}".',
     ])

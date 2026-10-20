@@ -42,10 +42,12 @@ def test_second_identical_text_is_served_from_cache(client):
     assert verdict["answer"] == [e for e in first if e["type"] == "verdict"][0]["report"]["answer"]
 
 
-def test_spacing_and_case_do_not_change_the_key(client):
+def test_spacing_does_not_change_the_key_but_case_does(client):
     post(client)
-    post(client, {"kind": "text", "text": "  sweden JOINED   nato in 2024. "})
+    post(client, {"kind": "text", "text": "  Sweden joined   NATO in 2024. "})
     assert len(client.calls) == 1
+    post(client, {"kind": "text", "text": "sweden joined nato in 2024."})
+    assert len(client.calls) == 2
 
 
 def test_key_changes_with_model_prompt_version_and_sources(monkeypatch):

@@ -16,7 +16,7 @@ def ttl_hours() -> float:
 def key_for(text: str) -> str:
     """Same text, models, prompts and sources give the same key. Case and spacing do not matter."""
     s = load_settings()
-    normalized = " ".join(text.casefold().split())
+    normalized = " ".join(text.split())
     parts = (normalized, s.model_primary, getattr(prompts, "PROMPT_VERSION", ""), ",".join(sorted(s.sources)))
     return hashlib.sha256("\x1f".join(parts).encode()).hexdigest()
 

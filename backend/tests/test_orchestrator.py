@@ -164,7 +164,7 @@ def test_one_claim_raising_does_not_stop_others(agents, monkeypatch):
     events = []
     report = run_input(events.append)
     assert [c.label for c in report.claims] == [VerdictLabel.UNVERIFIABLE, VerdictLabel.FALSE]
-    assert any(e["status"] == "failed" and "boom" in e["message"] and e["claim_id"] == "c1" for e in events)
+    assert any(e["status"] == "failed" and "left unverified" in e["message"] and e["claim_id"] == "c1" for e in events)
 
 
 def test_malformed_json_agent_error_becomes_unverifiable(agents, monkeypatch):
@@ -177,7 +177,7 @@ def test_malformed_json_agent_error_becomes_unverifiable(agents, monkeypatch):
     events = []
     report = run_input(events.append)
     assert report.claims[0].label == VerdictLabel.UNVERIFIABLE
-    assert any(e["status"] == "failed" and "AgentError" in e["message"] for e in events)
+    assert any(e["status"] == "failed" and "left unverified" in e["message"] for e in events)
 
 
 # ------------------------------------------------------------- v2: components and second opinion
@@ -203,7 +203,7 @@ def stub_judge(monkeypatch, agents, first, review=None, review_error=None):
     calls = {"review": 0}
     monkeypatch.setattr(orchestrator, "give_verdict", lambda c, ev, previous_failure=None: first)
 
-    def give_review(c, ev, v, derived):
+    def give_review(c, ev, v, derived, problems=None):
         calls["review"] += 1
         if review_error:
             raise review_error

@@ -60,8 +60,12 @@ MAX_BODY_BYTES = 8_000_000  # 5 MB image as base64 plus headroom
 
 @app.middleware("http")
 async def limit_body(request, call_next):
-    # ponytail: trusts Content-Length; a chunked upload without one is not capped
-    if int(request.headers.get("content-length") or 0) > MAX_BODY_BYTES:
+    length = request.headers.get("content-length")
+    if length is None and request.headers.get("transfer-encoding"):
+        return JSONResponse({"detail": "Send a Content-Length header."}, status_code=411)
+    if length is not None and not length.isdigit():
+        return JSONResponse({"detail": "Bad Content-Length."}, status_code=400)
+    if int(length or 0) > MAX_BODY_BYTES:
         return JSONResponse({"detail": "Request too large."}, status_code=413)
     return await call_next(request)
 

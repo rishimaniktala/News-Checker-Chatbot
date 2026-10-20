@@ -30,6 +30,7 @@ from pydantic import BaseModel, Field
 from .llm import AgentError, embed, generate as _call, set_usage_sink  # noqa: F401  (re-exported)
 from .prompts import (
     _outlet,
+    _safe_id,
     neutralize as _neutralize,
     EXTRACTION_SYSTEM_PROMPT,
     OCR_SYSTEM_PROMPT,
@@ -99,7 +100,7 @@ def build_verify_user_prompt(
     today = today or date.today()
     parts = [
         f"Today's date: {today.isoformat()}",
-        f'<claim id="{claim.id}" time_sensitivity="{claim.time_sensitivity.value}">',
+        f'<claim id="{_safe_id(claim.id)}" time_sensitivity="{claim.time_sensitivity.value}">',
         _neutralize(claim.text),
         "</claim>",
         "",
@@ -123,7 +124,7 @@ def build_verify_user_prompt(
             f"claim reviewed: {_neutralize(f.claim_reviewed)}",
             "",
         ]
-    parts += ["</evidence>", "", f'Return the evidence check for claim_id "{claim.id}".']
+    parts += ["</evidence>", "", f'Return the evidence check for claim_id "{_safe_id(claim.id)}".']
     return "\n".join(parts)
 
 # --------------------------------------------------------------- the agents
@@ -200,9 +201,10 @@ def give_review(
     first: ClaimVerdict,
     derived_label: VerdictLabel,
     today: date | None = None,
+    problems: list[str] | None = None,
 ) -> ClaimVerdict:
-    """Second opinion when the judge's label and its components disagree."""
-    user = build_review_user_prompt(claim, evidence, first, derived_label.value, today)
+    """Second opinion when the judge's label and its components disagree, or do not line up with its citations."""
+    user = build_review_user_prompt(claim, evidence, first, derived_label.value, today, problems)
     verdict = _call(REVIEW_SYSTEM_PROMPT, user, ClaimVerdict, role="review")
     verdict.claim_id = claim.id
     return verdict

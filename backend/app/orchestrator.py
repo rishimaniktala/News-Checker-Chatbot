@@ -94,14 +94,17 @@ def second_opinion(claim: Claim, evidence: RankedEvidence, verdict: ClaimVerdict
 
     Returns the verdict to use and the judge_agreement factor: 0.5 if the reviewer produced a
     consistent, validated verdict, 0.0 if not (then the more conservative of the two labels wins)."""
-    t(Step.REVIEW, StepStatus.STARTED, message=f"Judge said {verdict.label.value}, its components say {derived.value}.",
-      payload={"judge": verdict.label.value, "derived": derived.value, "problems": reconcile(verdict, evidence)})
+    problems = reconcile(verdict, evidence)
+    why = (f"Judge said {verdict.label.value}, its components say {derived.value}." if derived != verdict.label
+           else f"Judge said {verdict.label.value}, but its components and citations do not line up.")
+    t(Step.REVIEW, StepStatus.STARTED, message=why,
+      payload={"judge": verdict.label.value, "derived": derived.value, "problems": problems})
     reviewed = None
     if not budget.exhausted:
         try:
-            reviewed = give_review(claim, evidence, verdict, derived)
+            reviewed = give_review(claim, evidence, verdict, derived, problems=problems)
         except Exception as e:
-            t(Step.REVIEW, StepStatus.FAILED, message=redact(f"{type(e).__name__}: {e}")[:300])
+            t(Step.REVIEW, StepStatus.FAILED, message="The second opinion could not be obtained.")
     if reviewed is not None:
         consistent = bool(reviewed.components) and derive_label(reviewed.components) == reviewed.label
         quotes_ok = not settings.enable_validator or validate_verdict(reviewed, evidence, 1).passed
@@ -109,6 +112,8 @@ def second_opinion(claim: Claim, evidence: RankedEvidence, verdict: ClaimVerdict
             t(Step.REVIEW, StepStatus.COMPLETED, message=f"Second opinion settled on {reviewed.label.value}.")
             return reviewed, JUDGE_AGREEMENT_RESOLVED
     label = more_conservative(verdict.label, derived)
+    if problems:
+        label = more_conservative(label, VerdictLabel.UNVERIFIABLE)
     t(Step.REVIEW, StepStatus.COMPLETED, message=f"Still unsettled; using the more cautious label {label.value}.")
     if label == verdict.label:
         return verdict, JUDGE_AGREEMENT_LOW
@@ -200,7 +205,7 @@ def check_claim(claim: Claim, search_fn: SearchFn, settings: Settings, budget: R
     judge_agreement = 1.0
     if verdict.components:
         derived = derive_label(verdict.components)
-        if derived != verdict.label:
+        if derived != verdict.label or reconcile(verdict, evidence):
             verdict, judge_agreement = second_opinion(claim, evidence, verdict, derived, settings, budget, t)
 
     run_log = llm.current_log()
@@ -259,7 +264,7 @@ def check_input(inp: NormalizedInput, search_fn: SearchFn, settings: Settings, b
             reports.append(check_claim(claim, search_fn, settings, budget, emit, run_id, inp.source_url))
         except Exception as e:
             log_failure(log, f"claim {claim.id} failed")
-            t(Step.VERDICT, StepStatus.FAILED, claim.id, redact(f"{type(e).__name__}: {e}")[:300])
+            t(Step.VERDICT, StepStatus.FAILED, claim.id, "A step failed; this claim was left unverified.")
             reports.append(_unverifiable_report(
                 claim, "A step failed while checking this claim.", None,
                 answer="I couldn't check this claim because something went wrong on my side."))

@@ -54,6 +54,11 @@ def site_name(url: str) -> str:
     return host.removeprefix("www.")
 
 
+def _plain_url(url: str) -> bool:
+    """http(s) only, with no backslash, whitespace or control characters: browsers and urlsplit disagree on those."""
+    return url.startswith(("http://", "https://")) and not any(c == "\\" or c.isspace() or ord(c) < 32 for c in url)
+
+
 def is_allowed(url: str, allowed: set[str]) -> bool:
     host = site_name(url)
     return any(host == d or host.endswith("." + d) for d in allowed)
@@ -81,16 +86,22 @@ def search(query: str, unavailable: list[str], client: httpx.Client | None = Non
     allowed = allowed_domains()
     max_passages = _env_int("WEB_MAX_PASSAGES", MAX_PASSAGES_PER_ARTICLE)
     out = []
-    for item in data.get("data") or []:
-        url = item.get("url") or ""
-        if not url.startswith(("http://", "https://")) or not is_allowed(url, allowed):
+    items = data.get("data") if isinstance(data, dict) else None
+    if not isinstance(items, list):
+        unavailable.append("web search: unexpected reply")
+        return []
+    for item in items:
+        if not isinstance(item, dict):
             continue
-        markdown = item.get("markdown") or ""
-        if len(markdown) < MIN_PAGE_CHARS:
+        url = item.get("url")
+        if not isinstance(url, str) or not _plain_url(url) or not is_allowed(url, allowed):
             continue
-        meta = item.get("metadata") or {}
+        markdown = item.get("markdown")
+        if not isinstance(markdown, str) or len(markdown) < MIN_PAGE_CHARS:
+            continue
+        meta = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
         published = parse_time(meta.get("publishedTime") or meta.get("article:published_time") or meta.get("modifiedTime"))
-        title = item.get("title") or meta.get("title") or site_name(url)
+        title = next((t for t in (item.get("title"), meta.get("title")) if isinstance(t, str) and t), site_name(url))
         for passage in split_passages(markdown)[:max_passages]:
             out.append({"url": url, "title": title, "published_at": published,
                         "passage": passage, "source_name": site_name(url)})

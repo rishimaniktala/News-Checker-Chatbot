@@ -37,7 +37,7 @@ def run(monkeypatch, text, evidence, first, review=None):
         claim_id=c.id, decision=EvidenceDecision.SUFFICIENT, relevant_ids=sorted(ev.valid_ids), reason="ok"))
     monkeypatch.setattr(orchestrator, "give_verdict", lambda c, ev, previous_failure=None: first)
 
-    def give_review(c, ev, v, derived):
+    def give_review(c, ev, v, derived, problems=None):
         reviews.append(derived)
         return review or v
 
