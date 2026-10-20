@@ -6,6 +6,7 @@ this file owns how the call is made.
 
 from __future__ import annotations
 
+import logging
 import time
 from contextvars import ContextVar
 from dataclasses import dataclass, field
@@ -16,8 +17,9 @@ from google.genai import types
 from pydantic import BaseModel, ValidationError
 
 from .config import load_settings
-from .resilience import call_with_retry
+from .resilience import CircuitOpen, call_with_retry, retryable
 
+log = logging.getLogger(__name__)
 _usage_sink: ContextVar[Optional[Callable[[str, int, int], None]]] = ContextVar("usage_sink", default=None)
 
 
@@ -42,7 +44,7 @@ class RunLog:
 
     @property
     def models_used(self) -> list[str]:
-        return list(dict.fromkeys(c.model for c in self.calls))
+        return list(dict.fromkeys(c.model for c in self.calls if c.role != "embed"))
 
     @property
     def fallback_used(self) -> bool:
@@ -91,14 +93,18 @@ def _get_client() -> genai.Client:
 
 _CONFIG_FIELDS = types.GenerateContentConfig.model_fields
 CALL_TIMEOUT_MS = 40_000
+PRIMARY, FALLBACK = "gemini:primary", "gemini:fallback"
+ROLE_THINKING = {"ocr": "low", "extract": "low", "evidence": "low", "judge": "medium", "review": "high"}
+_BUDGET_TOKENS = {"low": 512, "medium": 1024, "high": 2048}
 
 
-def _thinking_config(model: str) -> types.ThinkingConfig | None:
+def _thinking_config(model: str, role: str = "evidence") -> types.ThinkingConfig | None:
     """Gemini 2.5 takes a token budget, newer models a level. Unknown or older SDKs get none."""
+    level = ROLE_THINKING.get(role, "low")
     if model.startswith("gemini-2.5"):
-        return types.ThinkingConfig(thinking_budget=512)
+        return types.ThinkingConfig(thinking_budget=_BUDGET_TOKENS[level])
     if "thinking_level" in types.ThinkingConfig.model_fields:
-        return types.ThinkingConfig(thinking_level="low")
+        return types.ThinkingConfig(thinking_level=level)
     return None
 
 
@@ -107,7 +113,8 @@ def _billed_output_tokens(usage) -> int:
     return (usage.candidates_token_count or 0) + (getattr(usage, "thoughts_token_count", 0) or 0)
 
 
-def _build_config(system: str, schema: type[BaseModel], model: str) -> types.GenerateContentConfig:
+def _build_config(system: str, schema: type[BaseModel], model: str, role: str = "evidence",
+                  think: bool = True) -> types.GenerateContentConfig:
     """Request settings: system prompt + JSON output in `schema`'s shape.
     Written to work across google-genai versions."""
     cfg: dict = {"system_instruction": system, "response_mime_type": "application/json"}
@@ -115,39 +122,40 @@ def _build_config(system: str, schema: type[BaseModel], model: str) -> types.Gen
         cfg["response_json_schema"] = schema.model_json_schema()
     else:  # older SDK versions
         cfg["response_schema"] = schema
-    if thinking := _thinking_config(model):
+    if think and (thinking := _thinking_config(model, role)):
         cfg["thinking_config"] = thinking
     return types.GenerateContentConfig(**cfg)
 
 
-def generate(system: str, contents, schema: type[T], *, role: str = "judge", attempts: int = 2) -> T:
-    """Call Gemini and parse the reply into `schema`.
+def _send(model: str, system: str, contents, schema: type[BaseModel], role: str):
+    """One request. A rejected thinking config is dropped and the request repeated once."""
+    try:
+        config = _build_config(system, schema, model, role)
+        return _get_client().models.generate_content(model=model, contents=contents, config=config)
+    except Exception as e:
+        if getattr(e, "code", None) != 400 or "think" not in str(e).lower():
+            raise
+        config = _build_config(system, schema, model, role, think=False)
+        return _get_client().models.generate_content(model=model, contents=contents, config=config)
 
-    Retries once if the reply is malformed or breaks a schema rule (this
-    includes the validators in schemas.py, e.g. a TRUE verdict with no citations).
-    """
+
+def _record(role: str, model: str, fallback: bool, response, started: float) -> None:
+    usage = getattr(response, "usage_metadata", None)
+    tokens_in = (usage.prompt_token_count or 0) if usage else 0
+    tokens_out = _billed_output_tokens(usage) if usage else 0
+    if (run_log := current_log()) is not None:
+        run_log.calls.append(CallRecord(role, model, fallback, tokens_in, tokens_out,
+                                        int((time.monotonic() - started) * 1000)))
+    if (sink := _usage_sink.get()) and usage:
+        sink(model, tokens_in, tokens_out)
+
+
+def _run(api: str, model: str, system: str, contents, schema: type[T], role: str, attempts: int) -> T:
     last_error: Exception | None = None
-    tries = 0
-    started = time.monotonic()
-    while tries < attempts:
-        model = load_settings().gemini_model
-        config = _build_config(system, schema, model)
-        response = call_with_retry(
-            lambda: _get_client().models.generate_content(model=model, contents=contents, config=config),
-            api="gemini",
-        )
-        tries += 1
-        log = current_log()
-        if log is not None:
-            usage_md = getattr(response, "usage_metadata", None)
-            log.calls.append(CallRecord(
-                role=role, model=model,
-                tokens_in=(usage_md.prompt_token_count or 0) if usage_md else 0,
-                tokens_out=_billed_output_tokens(usage_md) if usage_md else 0,
-                latency_ms=int((time.monotonic() - started) * 1000)))
-        sink, usage = _usage_sink.get(), getattr(response, "usage_metadata", None)
-        if sink and usage:
-            sink(model, usage.prompt_token_count or 0, _billed_output_tokens(usage))
+    for _ in range(attempts):
+        started = time.monotonic()
+        response = call_with_retry(lambda: _send(model, system, contents, schema, role), api=api)
+        _record(role, model, api == FALLBACK, response, started)
         try:
             return schema.model_validate_json(response.text or "")
         except ValidationError as e:
@@ -155,11 +163,38 @@ def generate(system: str, contents, schema: type[T], *, role: str = "judge", att
     raise AgentError(f"{schema.__name__}: model gave no valid output after {attempts} attempts: {last_error}")
 
 
+def _use_fallback(exc: Exception) -> bool:
+    """Outages, rate limits and a missing model switch models. Auth and bad requests do not."""
+    return isinstance(exc, (AgentError, CircuitOpen)) or retryable(exc) or getattr(exc, "code", None) == 404
+
+
+def generate(system: str, contents, schema: type[T], *, role: str = "judge", attempts: int = 2) -> T:
+    """Call Gemini and parse the reply into `schema`.
+
+    The primary model gets `attempts` tries at valid output (this includes the validators in
+    schemas.py, e.g. a TRUE verdict with no citations). If it is down, rate limited, missing or
+    keeps returning invalid output, the fallback model gets one try.
+    """
+    settings = load_settings()
+    try:
+        return _run(PRIMARY, settings.model_primary, system, contents, schema, role, attempts)
+    except Exception as e:
+        if not _use_fallback(e) or settings.model_fallback == settings.model_primary:
+            raise
+        level = log.error if getattr(e, "code", None) == 404 else log.warning
+        level("primary model %s failed (%s), trying %s", settings.model_primary,
+              type(e).__name__, settings.model_fallback)
+    return _run(FALLBACK, settings.model_fallback, system, contents, schema, role, 1)
+
+
 EMBED_MODEL = "gemini-embedding-001"
 
 
 def embed(texts: list[str]) -> list[list[float]]:
     """Embedding vectors for reranking. Raises on failure; rerank falls back to lexical scoring."""
+    started = time.monotonic()
     response = call_with_retry(
         lambda: _get_client().models.embed_content(model=EMBED_MODEL, contents=texts), api="gemini")
+    if (run_log := current_log()) is not None:
+        run_log.calls.append(CallRecord("embed", EMBED_MODEL, latency_ms=int((time.monotonic() - started) * 1000)))
     return [e.values for e in response.embeddings]

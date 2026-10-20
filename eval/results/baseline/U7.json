@@ -1,0 +1,11 @@
+{
+  "id": "U7",
+  "gold": "UNVERIFIABLE",
+  "pred": "UNVERIFIABLE",
+  "confidence": 0.0,
+  "first_attempt_valid": null,
+  "error": null,
+  "latency_s": 3.044,
+  "cost_usd": 0.0013935,
+  "correct": true
+}

@@ -31,23 +31,33 @@ def _flag(name: str, default: bool) -> bool:
     return os.environ.get(name, str(default)).strip().lower() in ("1", "true", "yes", "on")
 
 
+DEFAULT_PRIMARY = "gemini-3.6-flash"
+DEFAULT_FALLBACK = "gemini-3.5-flash-lite"
+
+
 @dataclass(frozen=True)
 class Settings:
-    gemini_model: str
+    model_primary: str
     enable_validator: bool
     sources: tuple[str, ...]
     max_iterations: int
     max_cost_usd_per_run: float
+    model_fallback: str = DEFAULT_FALLBACK
+
+    @property
+    def gemini_model(self) -> str:
+        return self.model_primary
 
 
 def load_settings() -> Settings:
     sources = tuple(s.strip() for s in os.environ.get("SOURCES", "guardian,web,factcheck").split(",") if s.strip())
     return Settings(
-        gemini_model=os.environ.get("GEMINI_MODEL", "gemini-2.5-flash"),
+        model_primary=os.environ.get("MODEL_PRIMARY") or os.environ.get("GEMINI_MODEL") or DEFAULT_PRIMARY,
         enable_validator=_flag("ENABLE_VALIDATOR", True),
         sources=sources or ("guardian",),
         max_iterations=max(1, min(3, int(os.environ.get("MAX_ITERATIONS", "3")))),
         max_cost_usd_per_run=float(os.environ.get("MAX_COST_USD_PER_RUN", "0.05")),
+        model_fallback=os.environ.get("MODEL_FALLBACK") or DEFAULT_FALLBACK,
     )
 
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Callable
 
-from . import agents, orchestrator
+from . import agents, llm, orchestrator, prompts
 from .budget import RunBudget
 from .config import Settings
 from .schemas import FinalReport, InputType, NormalizedInput, Step, StepStatus
@@ -51,11 +51,35 @@ def _normalize(req: dict, emit: Callable[[dict], None], run_id: str) -> Normaliz
     raise RunInputError("bad_input", "Unsupported input kind.")
 
 
+_ROLE_STEP = {"ocr": Step.NORMALIZE, "extract": Step.EXTRACT, "evidence": Step.RETRIEVE,
+              "judge": Step.VERDICT, "review": Step.REVIEW}
+
+
 def run_check(req: dict, emit: Callable[[dict], None], settings: Settings,
               search_fn: orchestrator.SearchFn, budget: RunBudget) -> FinalReport:
     run_id = req.get("run_id") or uuid.uuid4().hex[:12]
+    calls = llm.begin_run()
+    seen, announced = 0, set()
+
+    def notify() -> None:
+        nonlocal seen
+        for c in calls.calls[seen:]:
+            if c.fallback_used and c.model not in announced:
+                announced.add(c.model)
+                orchestrator.trace(emit, run_id, _ROLE_STEP.get(c.role, Step.VERDICT), StepStatus.COMPLETED,
+                                   message=f"Switched to the backup model {c.model}")
+        seen = len(calls.calls)
+
+    def emit_noting(event: dict) -> None:
+        notify()
+        emit(event)
+
     agents.set_usage_sink(budget.add_usage)
-    orchestrator.trace(emit, run_id, Step.NORMALIZE, StepStatus.STARTED)
-    inp = _normalize(req, emit, run_id)
-    orchestrator.trace(emit, run_id, Step.NORMALIZE, StepStatus.COMPLETED, message=inp.input_type.value)
-    return orchestrator.check_input(inp, search_fn, settings, budget, emit, run_id)
+    orchestrator.trace(emit_noting, run_id, Step.NORMALIZE, StepStatus.STARTED)
+    inp = _normalize(req, emit_noting, run_id)
+    orchestrator.trace(emit_noting, run_id, Step.NORMALIZE, StepStatus.COMPLETED, message=inp.input_type.value)
+    report = orchestrator.check_input(inp, search_fn, settings, budget, emit_noting, run_id)
+    notify()
+    report.models_used = calls.models_used
+    report.prompt_version = getattr(prompts, "PROMPT_VERSION", None)
+    return report

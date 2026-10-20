@@ -1,0 +1,11 @@
+{
+  "id": "T5",
+  "gold": "TRUE",
+  "pred": "TRUE",
+  "confidence": 0.7,
+  "first_attempt_valid": null,
+  "error": null,
+  "latency_s": 10.701,
+  "cost_usd": 0.0048892,
+  "correct": true
+}

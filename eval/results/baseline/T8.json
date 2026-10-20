@@ -1,0 +1,11 @@
+{
+  "id": "T8",
+  "gold": "TRUE",
+  "pred": "TRUE",
+  "confidence": 0.7,
+  "first_attempt_valid": null,
+  "error": null,
+  "latency_s": 11.02,
+  "cost_usd": 0.0048673,
+  "correct": true
+}

@@ -1,0 +1,11 @@
+{
+  "id": "U5",
+  "gold": "UNVERIFIABLE",
+  "pred": "UNVERIFIABLE",
+  "confidence": 0.0,
+  "first_attempt_valid": null,
+  "error": null,
+  "latency_s": 7.847,
+  "cost_usd": 0.0029224000000000003,
+  "correct": true
+}

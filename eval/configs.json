@@ -26,5 +26,29 @@
     "MAX_ITERATIONS": "3",
     "MAX_COST_USD_PER_RUN": "0.05",
     "GEMINI_MODEL": "gemini-2.5-flash"
+  },
+  "v1_baseline": {
+    "ENABLE_VALIDATOR": "true",
+    "SOURCES": "guardian,web,factcheck",
+    "MAX_ITERATIONS": "3",
+    "MAX_COST_USD_PER_RUN": "0.05",
+    "PROMPT_VERSION": "v1",
+    "MODEL_PRIMARY": "gemini-2.5-flash"
+  },
+  "v2_primary": {
+    "ENABLE_VALIDATOR": "true",
+    "SOURCES": "guardian,web,factcheck",
+    "MAX_ITERATIONS": "3",
+    "MAX_COST_USD_PER_RUN": "0.05",
+    "PROMPT_VERSION": "v2",
+    "MODEL_PRIMARY": "gemini-3.6-flash"
+  },
+  "v2_lite": {
+    "ENABLE_VALIDATOR": "true",
+    "SOURCES": "guardian,web,factcheck",
+    "MAX_ITERATIONS": "3",
+    "MAX_COST_USD_PER_RUN": "0.05",
+    "PROMPT_VERSION": "v2",
+    "MODEL_PRIMARY": "gemini-3.5-flash-lite"
   }
 }

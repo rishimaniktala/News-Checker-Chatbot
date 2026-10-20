@@ -1,3 +1,5 @@
+import pytest
+
 from app.rules import check_rationale, validate_verdict
 from app.schemas import (
     Citation, CitationFailure, ClaimVerdict, EvidenceItem, FactCheckReview,
@@ -96,3 +98,35 @@ def test_validate_verdict_blank_quote():
     v = verdict().model_copy(update={"citations": [Citation.model_construct(evidence_id="E1", quote="  ", stance=Stance.SUPPORTS)]})
     r = validate_verdict(v, evidence(), 1)
     assert r.failed_citations[0].reason == CitationFailure.QUOTE_NOT_FOUND
+
+
+# ------------------------------------------------------------ v2 confidence in consensus
+
+
+def _v2_case():
+    from app.schemas import Citation, ClaimVerdict, ComponentCheck, ComponentStatus, EvidenceItem, RankedEvidence, Stance, VerdictLabel
+    ev = RankedEvidence(claim_id="c1", guardian=[
+        EvidenceItem(id="E1", url="https://alpha.example/1", title="Alpha", passage="Alpha reported the event.", rerank_score=0.5, source_name="A"),
+        EvidenceItem(id="E2", url="https://beta.example/2", title="Beta", passage="Beta covered something else.", rerank_score=0.5, source_name="B")])
+    v = ClaimVerdict(claim_id="c1", label=VerdictLabel.TRUE, confidence=0.99, answer="a", reasoning="r",
+                     citations=[Citation(evidence_id=i, quote="p", stance=Stance.SUPPORTS) for i in ("E1", "E2")],
+                     components=[ComponentCheck(name="x", status=ComponentStatus.SUPPORTED, evidence_ids=["E1", "E2"])])
+    return v, ev
+
+
+def test_consensus_fills_named_factors_and_ignores_the_models_self_report():
+    from app.rules import compute_consensus
+    v, ev = _v2_case()
+    factors = {}
+    high = compute_consensus(v, ev, factors=factors)
+    assert factors["evidence_strength"] == 1.0 and factors["source_independence"] == pytest.approx(2 / 3, abs=1e-3)
+    v.confidence = 0.01
+    assert compute_consensus(v, ev).final_confidence == high.final_confidence
+
+
+def test_consensus_confidence_drops_with_fallback_retry_and_disagreement():
+    from app.rules import compute_consensus
+    v, ev = _v2_case()
+    base = compute_consensus(v, ev).final_confidence
+    weaker = compute_consensus(v, ev, fallback_used=True, quote_first_try=False, judge_agreement=0.0)
+    assert weaker.final_confidence < base <= 0.70

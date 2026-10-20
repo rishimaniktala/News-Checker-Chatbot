@@ -110,7 +110,7 @@ def offline(monkeypatch, tmp_path, sleeps):
     for name, value in {"GUARDIAN_API_KEY": FAKE_KEYS[0], "FACTCHECK_API_KEY": FAKE_KEYS[1],
                         "GEMINI_API_KEY": FAKE_KEYS[2], "FIRECRAWL_API_KEY": FAKE_KEYS[3],
                         "NEWS_DB": str(tmp_path / "t.db"), "MAX_COST_USD_PER_RUN": "0.05",
-                        "MAX_ITERATIONS": "3", "ENABLE_VALIDATOR": "true", "SOURCES": "guardian,factcheck"}.items():
+                        "MAX_ITERATIONS": "3", "MODEL_PRIMARY": "gemini-3.6-flash", "MODEL_FALLBACK": "gemini-3.6-flash", "ENABLE_VALIDATOR": "true", "SOURCES": "guardian,factcheck"}.items():
         monkeypatch.setenv(name, value)
     yield
     resilience.reset_breakers()

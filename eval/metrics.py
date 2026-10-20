@@ -40,3 +40,29 @@ def calibration(confidences: list[float], correct: list[bool]) -> list[tuple[flo
     """(confidence, was_correct) pairs sorted by confidence, high first.
     Plot or bucket these to see whether 0.9 means right nine times in ten."""
     return sorted(zip(confidences, correct), key=lambda t: -t[0])
+
+
+def reliability_bins(confidences: list[float], correct: list[bool], bins: int = 10) -> list[dict]:
+    """Equal-width confidence bins with count, mean confidence and accuracy. Empty bins are left out."""
+    grouped: list[list[tuple[float, bool]]] = [[] for _ in range(bins)]
+    for c, ok in zip(confidences, correct):
+        grouped[min(int(c * bins), bins - 1)].append((c, ok))
+    return [
+        {"lo": i / bins, "hi": (i + 1) / bins, "n": len(g),
+         "mean_confidence": sum(c for c, _ in g) / len(g), "accuracy": sum(ok for _, ok in g) / len(g)}
+        for i, g in enumerate(grouped) if g
+    ]
+
+
+def expected_calibration_error(confidences: list[float], correct: list[bool], bins: int = 10) -> float:
+    """Size-weighted gap between confidence and accuracy over the reliability bins. 0 is perfectly calibrated."""
+    n = len(confidences)
+    if not n:
+        return 0.0
+    return sum(b["n"] / n * abs(b["mean_confidence"] - b["accuracy"])
+               for b in reliability_bins(confidences, correct, bins))
+
+
+def critical_swaps(gold: list[str], pred: list[str]) -> int:
+    """TRUE predicted as FALSE or the reverse: the errors that mislead a reader outright."""
+    return sum({g, p} == {"TRUE", "FALSE"} for g, p in zip(gold, pred))

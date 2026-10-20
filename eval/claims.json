@@ -144,6 +144,228 @@
       "claim": "Every Tuesday in 2016 was slightly rainier than the Wednesday before it in Cardiff.",
       "label": "UNVERIFIABLE",
       "note": "Too obscure to settle."
+    },
+    {
+      "id": "T9",
+      "claim": "The Berlin Wall fell in November 1989.",
+      "label": "TRUE",
+      "note": "9 Nov 1989."
+    },
+    {
+      "id": "T10",
+      "claim": "Apollo 11 made the first crewed Moon landing in July 1969.",
+      "label": "TRUE",
+      "note": "20 Jul 1969."
+    },
+    {
+      "id": "T11",
+      "claim": "The World Health Organization declared COVID-19 a pandemic in March 2020.",
+      "label": "TRUE",
+      "note": "11 Mar 2020."
+    },
+    {
+      "id": "T12",
+      "claim": "Charles III was crowned king in May 2023.",
+      "label": "TRUE",
+      "note": "6 May 2023."
+    },
+    {
+      "id": "T13",
+      "claim": "Finland joined NATO in April 2023.",
+      "label": "TRUE",
+      "note": "4 Apr 2023."
+    },
+    {
+      "id": "T14",
+      "claim": "Boris Johnson became UK prime minister in July 2019.",
+      "label": "TRUE",
+      "note": "Succeeded Theresa May."
+    },
+    {
+      "id": "T15",
+      "claim": "Scotland voted against independence in a 2014 referendum.",
+      "label": "TRUE",
+      "note": "55% No."
+    },
+    {
+      "id": "T16",
+      "claim": "A fire severely damaged Notre-Dame cathedral in Paris in April 2019.",
+      "label": "TRUE",
+      "note": "15 Apr 2019."
+    },
+    {
+      "id": "T17",
+      "claim": "Prince Philip, Duke of Edinburgh, died in April 2021.",
+      "label": "TRUE",
+      "note": "9 Apr 2021."
+    },
+    {
+      "id": "T18",
+      "claim": "India landed Chandrayaan-3 near the Moon's south pole in August 2023.",
+      "label": "TRUE",
+      "note": "23 Aug 2023."
+    },
+    {
+      "id": "T19",
+      "claim": "Large studies have found that vaccines do not cause autism.",
+      "label": "TRUE",
+      "note": "Regression: stance misread as support for the myth."
+    },
+    {
+      "id": "R1",
+      "claim": "Sweden joined NATO in 2024.",
+      "label": "TRUE",
+      "note": "Regression: the year must be addressed, not just the topic. Joined 7 Mar 2024."
+    },
+    {
+      "id": "R2",
+      "claim": "The Bank of England raised interest rates to 5.25% in August 2023.",
+      "label": "TRUE",
+      "note": "Regression: do not confuse with the August 2024 cut to 5%."
+    },
+    {
+      "id": "R3",
+      "claim": "Elon Musk completed his purchase of Twitter in October 2022.",
+      "label": "TRUE",
+      "note": "Regression: an unrelated 'Musk bought Google' fact-check must not matter."
+    },
+    {
+      "id": "S1",
+      "claim": "Sverige gick med i Nato 2024.",
+      "label": "TRUE",
+      "note": "Swedish input. Same fact as R1."
+    },
+    {
+      "id": "H1",
+      "claim": "भारत ने 2023 में चंद्रयान-3 को चंद्रमा के दक्षिणी ध्रुव के पास उतारा।",
+      "label": "TRUE",
+      "note": "Hindi input. Same fact as T18."
+    },
+    {
+      "id": "F9",
+      "claim": "Sweden joined NATO in 2022.",
+      "label": "FALSE",
+      "note": "Regression: applied in 2022, joined in 2024."
+    },
+    {
+      "id": "F10",
+      "claim": "The Bank of England cut interest rates in August 2023.",
+      "label": "FALSE",
+      "note": "Regression: it raised in Aug 2023; the cut was Aug 2024."
+    },
+    {
+      "id": "F11",
+      "claim": "Elon Musk bought Google.",
+      "label": "FALSE",
+      "note": "Regression: must not be confused with the Twitter purchase."
+    },
+    {
+      "id": "F12",
+      "claim": "Vaccines cause autism.",
+      "label": "FALSE",
+      "note": "Regression: stance misread. Debunked."
+    },
+    {
+      "id": "F13",
+      "claim": "Rishi Sunak became UK prime minister in 2019.",
+      "label": "FALSE",
+      "note": "October 2022."
+    },
+    {
+      "id": "F14",
+      "claim": "The UK held its EU referendum in 2018.",
+      "label": "FALSE",
+      "note": "June 2016."
+    },
+    {
+      "id": "F15",
+      "claim": "Apollo 11 landed on the Moon in 1972.",
+      "label": "FALSE",
+      "note": "1969."
+    },
+    {
+      "id": "F16",
+      "claim": "The Titanic sank in 1920.",
+      "label": "FALSE",
+      "note": "1912."
+    },
+    {
+      "id": "F17",
+      "claim": "Finland joined NATO in 2019.",
+      "label": "FALSE",
+      "note": "April 2023."
+    },
+    {
+      "id": "F18",
+      "claim": "A fire severely damaged Notre-Dame cathedral in Paris in 2015.",
+      "label": "FALSE",
+      "note": "April 2019."
+    },
+    {
+      "id": "F19",
+      "claim": "5G networks spread COVID-19.",
+      "label": "FALSE",
+      "note": "Debunked conspiracy theory."
+    },
+    {
+      "id": "S2",
+      "claim": "Sverige har förbjudit kontanter.",
+      "label": "FALSE",
+      "note": "Swedish input. Cash is not banned."
+    },
+    {
+      "id": "H2",
+      "claim": "भारत ने 2019 में क्रिकेट विश्व कप जीता था।",
+      "label": "FALSE",
+      "note": "Hindi input. England won in 2019."
+    },
+    {
+      "id": "U9",
+      "claim": "Vladimir Putin is a dictator.",
+      "label": "UNVERIFIABLE",
+      "note": "Regression: opinion, not fact-checked."
+    },
+    {
+      "id": "U10",
+      "claim": "Bitcoin will reach one million dollars by 2030.",
+      "label": "UNVERIFIABLE",
+      "note": "Prediction."
+    },
+    {
+      "id": "U11",
+      "claim": "The Beatles were the greatest band of all time.",
+      "label": "UNVERIFIABLE",
+      "note": "Opinion."
+    },
+    {
+      "id": "U12",
+      "claim": "Tony Blair was a bad prime minister.",
+      "label": "UNVERIFIABLE",
+      "note": "Opinion."
+    },
+    {
+      "id": "U13",
+      "claim": "Den svenska fikan är världens bästa kaffepaus.",
+      "label": "UNVERIFIABLE",
+      "note": "Swedish input. Opinion."
+    },
+    {
+      "id": "U14",
+      "claim": "क्रिकेट भारत का सबसे अच्छा खेल है।",
+      "label": "UNVERIFIABLE",
+      "note": "Hindi input. Opinion."
+    },
+    {
+      "id": "U15",
+      "claim": "Labour will govern the UK for the next twenty years.",
+      "label": "UNVERIFIABLE",
+      "note": "Prediction."
+    },
+    {
+      "id": "M1",
+      "claim": "Sweden and Finland both joined NATO in 2023.",
+      "label": "MISLEADING",
+      "note": "Regression: Finland 2023 is right, Sweden joined in 2024. Needs per-part checking."
     }
   ]
 }

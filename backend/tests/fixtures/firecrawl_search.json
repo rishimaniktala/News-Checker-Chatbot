@@ -1,0 +1,40 @@
+{
+  "success": true,
+  "data": [
+    {
+      "url": "https://www.reuters.com/business/boe-holds-rates-2023-08-03",
+      "title": "Bank of England raises rates to 5.25%",
+      "markdown": "LONDON (Reuters) - Interest rates were held at 5.25 percent on Thursday as policymakers weighed sticky inflation against weak growth. The Bank of England said borrowing costs would stay high for some time. Interest rates were held at 5.25 percent on Thursday as policymakers weighed sticky inflation against weak growth. The Bank of England said borrowing costs would stay high for some time. ",
+      "metadata": {
+        "publishedTime": "2023-08-03T11:00:00Z"
+      }
+    },
+    {
+      "url": "https://www.bbc.co.uk/news/business-1",
+      "title": "Bank of England raises rates to 5.25%",
+      "markdown": "LONDON (Reuters) - Interest rates were held at 5.25 percent on Thursday as policymakers weighed sticky inflation against weak growth. The Bank of England said borrowing costs would stay high for some time. Interest rates were held at 5.25 percent on Thursday as policymakers weighed sticky inflation against weak growth. The Bank of England said borrowing costs would stay high for some time. ",
+      "metadata": {
+        "publishedTime": "2023-08-03T12:00:00Z"
+      }
+    },
+    {
+      "url": "https://www.npr.org/2023/08/03/rates",
+      "title": "Why the Bank of England keeps rates high",
+      "markdown": "Interest rates were held at 5.25 percent on Thursday as policymakers weighed sticky inflation against weak growth. The Bank of England said borrowing costs would stay high for some time. Interest rates were held at 5.25 percent on Thursday as policymakers weighed sticky inflation against weak growth. The Bank of England said borrowing costs would stay high for some time. ",
+      "metadata": {
+        "publishedTime": "2023-08-03"
+      }
+    },
+    {
+      "url": "https://www.reddit.com/r/economy/x",
+      "title": "forum thread",
+      "markdown": "Interest rates were held at 5.25 percent on Thursday as policymakers weighed sticky inflation against weak growth. The Bank of England said borrowing costs would stay high for some time. Interest rates were held at 5.25 percent on Thursday as policymakers weighed sticky inflation against weak growth. The Bank of England said borrowing costs would stay high for some time. "
+    },
+    {
+      "url": "https://www.ft.com/content/snippet",
+      "title": "Paywalled",
+      "markdown": "Rates rise to 5.25% ...",
+      "description": "snippet"
+    }
+  ]
+}

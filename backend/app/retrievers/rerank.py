@@ -6,6 +6,7 @@ from typing import Callable
 
 from ..rules import normalize_rating
 from ..schemas import EvidenceItem, FactCheckReview
+from .tiers import tier_bonus
 
 EmbedFn = Callable[[list[str]], list[list[float]]]
 
@@ -46,7 +47,7 @@ def score(claim: str, texts: list[str], embed_fn: EmbedFn | None = None, symmetr
 
 def rank_guardian(claim: str, passages: list[dict], embed_fn: EmbedFn | None = None, k: int = 5) -> list[EvidenceItem]:
     scores = score(claim, [p["passage"] for p in passages], embed_fn)
-    top = sorted(zip(scores, passages), key=lambda sp: -sp[0])[:k]
+    top = sorted(zip(scores, passages), key=lambda sp: -(sp[0] + tier_bonus(sp[1]["url"])))[:k]
     return [
         EvidenceItem(
             id=f"E{i}",
@@ -63,7 +64,7 @@ def rank_guardian(claim: str, passages: list[dict], embed_fn: EmbedFn | None = N
 
 def rank_factchecks(claim: str, reviews: list[dict], embed_fn: EmbedFn | None = None, k: int = 5) -> list[FactCheckReview]:
     scores = score(claim, [r["claim_reviewed"] for r in reviews], embed_fn, symmetric=True)
-    top = sorted(zip(scores, reviews), key=lambda sr: -sr[0])[:k]
+    top = sorted(zip(scores, reviews), key=lambda sr: -(sr[0] + tier_bonus(sr[1]["url"])))[:k]
     return [
         FactCheckReview(id=f"F{i}", match_score=s, normalized_label=normalize_rating(r["raw_rating"]), **r)
         for i, (s, r) in enumerate(top, 1)

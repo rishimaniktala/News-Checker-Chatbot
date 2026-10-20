@@ -22,9 +22,12 @@ import re
 from functools import partial
 from typing import Callable
 
-from .agents import EvidenceDecision, check_evidence, extract_claims, give_verdict
+from . import llm
+from .agents import EvidenceDecision, check_evidence, extract_claims, give_review, give_verdict
 from .budget import RunBudget
 from .config import Settings, log_failure, redact
+from .judge import derive_label, more_conservative, reconcile
+from .prompts import PROMPT_VERSION
 from .rules import (
     MAX_ATTEMPTS,
     apply_rating_normalization,
@@ -35,9 +38,11 @@ from .rules import (
     unverifiable_result,
     validate_verdict,
 )
+from .retrievers.dedupe import count_independent
 from .schemas import (
     Claim,
     ClaimReport,
+    ClaimVerdict,
     FinalReport,
     NormalizedInput,
     RankedEvidence,
@@ -75,6 +80,41 @@ def _unverifiable_report(claim: Claim, why: str, evidence: RankedEvidence | None
     )
 
 
+_CONSERVATIVE_ANSWER = {
+    VerdictLabel.UNVERIFIABLE: "I couldn't confirm this: the sources did not settle every part of the claim.",
+    VerdictLabel.MISLEADING: "This is misleading: some parts of the claim are supported and others are not.",
+}
+JUDGE_AGREEMENT_RESOLVED = 0.5
+JUDGE_AGREEMENT_LOW = 0.0
+
+
+def second_opinion(claim: Claim, evidence: RankedEvidence, verdict: ClaimVerdict, derived: VerdictLabel,
+                   settings: Settings, budget: RunBudget, t) -> tuple[ClaimVerdict, float]:
+    """One review call when the judge's label differs from the one its components imply.
+
+    Returns the verdict to use and the judge_agreement factor: 0.5 if the reviewer produced a
+    consistent, validated verdict, 0.0 if not (then the more conservative of the two labels wins)."""
+    t(Step.REVIEW, StepStatus.STARTED, message=f"Judge said {verdict.label.value}, its components say {derived.value}.",
+      payload={"judge": verdict.label.value, "derived": derived.value, "problems": reconcile(verdict, evidence)})
+    reviewed = None
+    if not budget.exhausted:
+        try:
+            reviewed = give_review(claim, evidence, verdict, derived)
+        except Exception as e:
+            t(Step.REVIEW, StepStatus.FAILED, message=redact(f"{type(e).__name__}: {e}")[:300])
+    if reviewed is not None:
+        consistent = bool(reviewed.components) and derive_label(reviewed.components) == reviewed.label
+        quotes_ok = not settings.enable_validator or validate_verdict(reviewed, evidence, 1).passed
+        if consistent and quotes_ok and not reconcile(reviewed, evidence):
+            t(Step.REVIEW, StepStatus.COMPLETED, message=f"Second opinion settled on {reviewed.label.value}.")
+            return reviewed, JUDGE_AGREEMENT_RESOLVED
+    label = more_conservative(verdict.label, derived)
+    t(Step.REVIEW, StepStatus.COMPLETED, message=f"Still unsettled; using the more cautious label {label.value}.")
+    if label == verdict.label:
+        return verdict, JUDGE_AGREEMENT_LOW
+    return verdict.model_copy(update={"label": label, "answer": _CONSERVATIVE_ANSWER[label]}), JUDGE_AGREEMENT_LOW
+
+
 def check_claim(claim: Claim, search_fn: SearchFn, settings: Settings, budget: RunBudget,
                 emit: Emit, run_id: str, source_url: str | None = None) -> ClaimReport:
     t = partial(trace, emit, run_id, claim_id=claim.id)
@@ -104,6 +144,9 @@ def check_claim(claim: Claim, search_fn: SearchFn, settings: Settings, budget: R
         apply_rating_normalization(evidence)
         t(Step.RETRIEVE, StepStatus.COMPLETED, message=(
             f"{len(evidence.guardian)} articles, {len(evidence.factchecks)} fact-checks"))
+        if stats := getattr(search_fn, "stats", None):
+            t(Step.RETRIEVE, StepStatus.COMPLETED, payload={"round": round_no, "sources": dict(stats)},
+              message="Round %d sources: %s" % (round_no, ", ".join(f"{k} {v}" for k, v in stats.items())))
 
         check = check_evidence(claim, evidence, tried)
         relevant = set(check.relevant_ids)
@@ -111,7 +154,8 @@ def check_claim(claim: Claim, search_fn: SearchFn, settings: Settings, budget: R
         sufficient = check.decision == EvidenceDecision.SUFFICIENT
         will_retry = not sufficient and bool(check.new_search_queries) and round_no < rounds
         t(Step.RETRIEVE, StepStatus.RETRY if will_retry else StepStatus.COMPLETED,
-          message=check.reason, payload={"round": round_no, "decision": check.decision.value})
+          message=check.reason, payload={"round": round_no, "decision": check.decision.value,
+                                         "covered": check.covered_components, "missing": check.missing_components})
         if not will_retry:
             break
         queries = check.new_search_queries
@@ -153,7 +197,18 @@ def check_claim(claim: Claim, search_fn: SearchFn, settings: Settings, budget: R
         return _unverifiable_report(
             claim, "The model's citations could not be verified against the sources.", evidence)
 
-    consensus = compute_consensus(verdict, evidence)
+    judge_agreement = 1.0
+    if verdict.components:
+        derived = derive_label(verdict.components)
+        if derived != verdict.label:
+            verdict, judge_agreement = second_opinion(claim, evidence, verdict, derived, settings, budget, t)
+
+    run_log = llm.current_log()
+    judge_call = run_log.last("judge") if run_log else None
+    fallback_used = bool(run_log and run_log.fallback_used)
+    factors: dict[str, float] = {}
+    consensus = compute_consensus(verdict, evidence, quote_first_try=attempt == 1,
+                                  judge_agreement=judge_agreement, fallback_used=fallback_used, factors=factors)
     t(Step.CONSENSUS, StepStatus.COMPLETED, message=f"{consensus.final_label.value}")
     answer = verdict.answer
     if consensus.label_changed:
@@ -168,6 +223,11 @@ def check_claim(claim: Claim, search_fn: SearchFn, settings: Settings, budget: R
         evidence=evidence,
         consensus=consensus,
         attempts=attempt,
+        components=verdict.components,
+        model_used=judge_call.model if judge_call else None,
+        fallback_used=fallback_used,
+        independent_sources=count_independent(evidence, {c.evidence_id for c in verdict.citations}),
+        confidence_factors=factors,
     )
 
 
@@ -213,4 +273,6 @@ def check_input(inp: NormalizedInput, search_fn: SearchFn, settings: Settings, b
         claims=reports,
         skipped_claims=skipped,
         answer=answer,
+        prompt_version=PROMPT_VERSION,
+        models_used=run_log.models_used if (run_log := llm.current_log()) else [],
     )

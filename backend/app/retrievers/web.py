@@ -2,9 +2,12 @@
 
 Used as a fallback when The Guardian alone does not settle a claim. Results from any
 other domain are dropped, so the model never quotes a forum, a video page or a blog.
+Terms: keep only short passages (MAX_PASSAGE, 600 chars) as quoted evidence with the source
+link. Pages are never stored or republished.
 """
 
 import os
+from datetime import datetime
 from urllib.parse import urlsplit
 
 import httpx
@@ -14,7 +17,7 @@ from .guardian import MAX_PASSAGES_PER_ARTICLE, split_passages
 
 URL = "https://api.firecrawl.dev/v1/search"
 TIMEOUT = 25.0
-RESULTS_PER_QUERY = 6
+MIN_PAGE_CHARS = 200  # shorter markdown is a search snippet, not the article
 
 # News agencies, public broadcasters, fact-checkers and official bodies. Override with WEB_ALLOWED_DOMAINS.
 DEFAULT_ALLOWED = (
@@ -25,6 +28,20 @@ DEFAULT_ALLOWED = (
     "snopes.com,politifact.com,factcheck.org,fullfact.org,afpfactcheck.com,misbar.com,boomlive.in,"
     "who.int,un.org,nasa.gov,europa.eu,gov.uk,usa.gov"
 )
+
+
+def _env_int(name: str, default: int) -> int:
+    try:
+        return max(1, int(os.environ.get(name, default)))
+    except ValueError:
+        return default
+
+
+def parse_time(value) -> datetime | None:
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
 
 
 def allowed_domains() -> set[str]:
@@ -48,7 +65,7 @@ def search(query: str, unavailable: list[str], client: httpx.Client | None = Non
     if not key:
         unavailable.append("web search: no API key")
         return []
-    body = {"query": query, "limit": RESULTS_PER_QUERY,
+    body = {"query": query, "limit": _env_int("WEB_MAX_RESULTS", 6),
             "scrapeOptions": {"formats": ["markdown"], "onlyMainContent": True}}
 
     def fetch():
@@ -62,15 +79,19 @@ def search(query: str, unavailable: list[str], client: httpx.Client | None = Non
         unavailable.append("web search: source unavailable")
         return []
     allowed = allowed_domains()
+    max_passages = _env_int("WEB_MAX_PASSAGES", MAX_PASSAGES_PER_ARTICLE)
     out = []
     for item in data.get("data") or []:
         url = item.get("url") or ""
         if not url.startswith(("http://", "https://")) or not is_allowed(url, allowed):
             continue
+        markdown = item.get("markdown") or ""
+        if len(markdown) < MIN_PAGE_CHARS:
+            continue
         meta = item.get("metadata") or {}
-        published = meta.get("publishedTime") or meta.get("article:published_time") or meta.get("modifiedTime")
+        published = parse_time(meta.get("publishedTime") or meta.get("article:published_time") or meta.get("modifiedTime"))
         title = item.get("title") or meta.get("title") or site_name(url)
-        for passage in split_passages(item.get("markdown") or item.get("description") or "")[:MAX_PASSAGES_PER_ARTICLE]:
+        for passage in split_passages(markdown)[:max_passages]:
             out.append({"url": url, "title": title, "published_at": published,
                         "passage": passage, "source_name": site_name(url)})
     return out

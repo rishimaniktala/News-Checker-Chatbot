@@ -15,7 +15,7 @@ from test_orchestrator import search
 
 CLAIM_TEXT = {"kind": "text", "text": "Sweden banned cash."}
 SETTINGS = Settings("gemini-2.5-flash", True, ("guardian",), 3, 1.0)
-CALL_COST = (1000 * 0.30 + 200 * 2.50) / 1_000_000
+CALL_COST = (1000 * 1.50 + 200 * 7.50) / 1_000_000  # gemini-3.6-flash, pinned by the offline fixture
 
 
 @pytest.fixture

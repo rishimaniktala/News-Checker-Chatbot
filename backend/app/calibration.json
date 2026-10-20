@@ -1,0 +1,1 @@
+{"cutoffs": {"high": 0.75, "medium": 0.5}, "note": "defaults; eval/calibrate.py overwrites this from eval results"}

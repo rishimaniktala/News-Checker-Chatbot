@@ -27,7 +27,7 @@ def reset_breakers() -> None:
     _breakers.clear()
 
 
-def _retryable(exc: Exception) -> bool:
+def retryable(exc: Exception) -> bool:
     if isinstance(exc, httpx.HTTPStatusError):
         code = exc.response.status_code
     elif isinstance(exc, (httpx.TimeoutException, httpx.TransportError, TimeoutError, ConnectionError)):
@@ -54,7 +54,7 @@ def call_with_retry(
         try:
             result = fn()
         except Exception as exc:
-            if not _retryable(exc):
+            if not retryable(exc):
                 raise
             if attempt == retries:
                 state[0] += 1

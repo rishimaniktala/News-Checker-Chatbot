@@ -4,8 +4,12 @@ import re
 import time
 from dataclasses import dataclass, field
 
-# USD per 1M tokens (input, output). Unverified: check ai.google.dev/pricing.
+# USD per 1M tokens (input, output), list prices. Unverified: check ai.google.dev/pricing.
+# gemini-3.6-flash has an introductory half price until 2026-12-31; list price is used here.
 PRICES_PER_M = {
+    "gemini-3.6-flash": (1.50, 7.50),
+    "gemini-3.5-flash-lite": (0.30, 2.50),
+    "gemini-3.5-flash": (1.50, 9.00),
     "gemini-2.5-flash": (0.30, 2.50),
     "gemini-2.5-flash-lite": (0.10, 0.40),
     "gemini-2.5-pro": (1.25, 10.00),

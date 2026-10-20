@@ -1,0 +1,11 @@
+{
+  "id": "F8",
+  "gold": "FALSE",
+  "pred": "FALSE",
+  "confidence": 0.7,
+  "first_attempt_valid": null,
+  "error": null,
+  "latency_s": 10.697,
+  "cost_usd": 0.004558100000000001,
+  "correct": true
+}

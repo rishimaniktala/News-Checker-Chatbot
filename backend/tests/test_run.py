@@ -99,3 +99,18 @@ def test_usage_reaches_budget(monkeypatch, seen_text, fake_inputs):
     monkeypatch.setattr(orchestrator, "extract_claims", extract)
     run.run_check({"kind": "text", "text": "x"}, lambda e: None, SETTINGS, search, budget)
     assert (budget.tokens_in, budget.tokens_out) == (10, 5)
+
+
+def test_fallback_call_is_announced_once_and_models_recorded(monkeypatch, fake_inputs):
+    def extract(inp):
+        log = llm.current_log()
+        log.calls.append(llm.CallRecord("extract", "backup-m", True))
+        log.calls.append(llm.CallRecord("extract", "backup-m", True))
+        return ClaimExtraction(claims=[])
+
+    monkeypatch.setattr(orchestrator, "extract_claims", extract)
+    events = []
+    report = run.run_check({"kind": "text", "text": "x"}, events.append, SETTINGS, search, make_budget())
+    notes = [e["message"] for e in events if "Switched" in e.get("message", "")]
+    assert notes == ["Switched to the backup model backup-m"]
+    assert report.models_used == ["backup-m"]

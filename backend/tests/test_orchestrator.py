@@ -178,3 +178,124 @@ def test_malformed_json_agent_error_becomes_unverifiable(agents, monkeypatch):
     report = run_input(events.append)
     assert report.claims[0].label == VerdictLabel.UNVERIFIABLE
     assert any(e["status"] == "failed" and "AgentError" in e["message"] for e in events)
+
+
+# ------------------------------------------------------------- v2: components and second opinion
+
+from app import llm  # noqa: E402
+from app.schemas import ComponentCheck, ComponentStatus, Step  # noqa: E402
+
+QUOTE = "Sweden has not banned cash"
+
+
+def comp(status, ids=("E1",), name="part"):
+    return ComponentCheck(name=name, status=status, evidence_ids=list(ids))
+
+
+def v2_verdict(claim, label, components, confidence=0.9):
+    stance = Stance.REFUTES if label == VerdictLabel.FALSE else Stance.SUPPORTS
+    cites = [] if label == VerdictLabel.UNVERIFIABLE else [Citation(evidence_id="E1", quote=QUOTE, stance=stance)]
+    return ClaimVerdict(claim_id=claim.id, label=label, confidence=confidence, answer="Yes, per the sources.",
+                        reasoning="r", citations=cites, components=components)
+
+
+def stub_judge(monkeypatch, agents, first, review=None, review_error=None):
+    calls = {"review": 0}
+    monkeypatch.setattr(orchestrator, "give_verdict", lambda c, ev, previous_failure=None: first)
+
+    def give_review(c, ev, v, derived):
+        calls["review"] += 1
+        if review_error:
+            raise review_error
+        return review
+
+    monkeypatch.setattr(orchestrator, "give_review", give_review)
+    return calls
+
+
+def test_consistent_judge_gets_no_second_opinion(agents, monkeypatch):
+    first = v2_verdict(make_claim(), VerdictLabel.TRUE, [comp(ComponentStatus.SUPPORTED)])
+    calls = stub_judge(monkeypatch, agents, first)
+    report, events = run_claim(agents)
+    assert calls["review"] == 0
+    assert report.label == VerdictLabel.TRUE
+    assert report.confidence_factors["judge_agreement"] == 1.0
+    assert [c.status for c in report.components] == [ComponentStatus.SUPPORTED]
+    assert not any(e["step"] == Step.REVIEW.value for e in events)
+
+
+def test_second_opinion_settles_a_label_mismatch(agents, monkeypatch):
+    claim = make_claim()
+    first = v2_verdict(claim, VerdictLabel.TRUE, [comp(ComponentStatus.CONTRADICTED)])
+    fixed = v2_verdict(claim, VerdictLabel.FALSE, [comp(ComponentStatus.CONTRADICTED)])
+    calls = stub_judge(monkeypatch, agents, first, review=fixed)
+    report, events = run_claim(agents)
+    assert calls["review"] == 1
+    assert report.label == VerdictLabel.FALSE
+    assert report.confidence_factors["judge_agreement"] == 0.5
+    assert [e["status"] for e in events if e["step"] == Step.REVIEW.value] == ["started", "completed"]
+
+
+def test_unresolved_mismatch_takes_the_more_cautious_label_and_marks_agreement_low(agents, monkeypatch):
+    claim = make_claim()
+    first = v2_verdict(claim, VerdictLabel.TRUE, [comp(ComponentStatus.SUPPORTED), comp(ComponentStatus.UNKNOWN, ())])
+    still_wrong = v2_verdict(claim, VerdictLabel.TRUE, [comp(ComponentStatus.SUPPORTED), comp(ComponentStatus.UNKNOWN, ())])
+    stub_judge(monkeypatch, agents, first, review=still_wrong)
+    report, _ = run_claim(agents)
+    assert report.label == VerdictLabel.UNVERIFIABLE
+    assert report.confidence_factors["judge_agreement"] == 0.0
+    assert report.answer.startswith("I couldn't confirm")
+
+
+def test_review_with_invented_quote_is_not_trusted(agents, monkeypatch):
+    claim = make_claim()
+    first = v2_verdict(claim, VerdictLabel.TRUE, [comp(ComponentStatus.SUPPORTED), comp(ComponentStatus.CONTRADICTED, ("E1",))])
+    bad = v2_verdict(claim, VerdictLabel.MISLEADING, first.components)
+    bad.citations[0].quote = "text that is not in the passage"
+    stub_judge(monkeypatch, agents, first, review=bad)
+    report, _ = run_claim(agents)
+    assert report.label == VerdictLabel.MISLEADING
+    assert report.confidence_factors["judge_agreement"] == 0.0
+
+
+def test_review_failure_falls_back_and_never_leaks_a_key(agents, monkeypatch):
+    claim = make_claim()
+    first = v2_verdict(claim, VerdictLabel.TRUE, [comp(ComponentStatus.UNKNOWN, ())])
+    stub_judge(monkeypatch, agents, first, review_error=RuntimeError("boom AIzaSyA1234567890123456789012345"))
+    report, events = run_claim(agents)
+    assert report.label == VerdictLabel.UNVERIFIABLE
+    assert "AIza" not in str(events)
+
+
+def test_v1_style_verdict_without_components_skips_review(agents, monkeypatch):
+    calls = stub_judge(monkeypatch, agents, good_verdict(make_claim()))
+    report, _ = run_claim(agents)
+    assert calls["review"] == 0 and report.label == VerdictLabel.FALSE and report.components == []
+
+
+def test_report_records_model_fallback_and_independent_sources(agents, monkeypatch):
+    first = v2_verdict(make_claim(), VerdictLabel.TRUE, [comp(ComponentStatus.SUPPORTED)])
+    stub_judge(monkeypatch, agents, first)
+    log = llm.begin_run()
+    log.calls += [llm.CallRecord("judge", "gemini-3.5-flash-lite", fallback_used=True)]
+    report, _ = run_claim(agents)
+    assert report.model_used == "gemini-3.5-flash-lite" and report.fallback_used
+    assert report.independent_sources == 1
+    assert report.confidence_factors["model_quality"] < 1.0
+
+
+def test_trace_names_counts_per_source(agents, monkeypatch):
+    stub_judge(monkeypatch, agents, v2_verdict(make_claim(), VerdictLabel.TRUE, [comp(ComponentStatus.SUPPORTED)]))
+    fn = agents["search_fn"]
+    fn.stats = {"guardian": 5, "web": 3, "factcheck": 1}
+    _, events = run_claim(agents)
+    assert any(e["message"] == "Round 1 sources: guardian 5, web 3, factcheck 1" for e in events)
+
+
+def test_final_report_records_prompt_version_and_models(monkeypatch):
+    monkeypatch.setattr(orchestrator, "extract_claims", lambda inp: ClaimExtraction(claims=[]))
+    log = llm.begin_run()
+    log.calls.append(llm.CallRecord("extract", "gemini-3.6-flash"))
+    inp = NormalizedInput(input_type=InputType.TEXT, text="t")
+    out = orchestrator.check_input(inp, search, SETTINGS, make_budget(), lambda e: None, "r1")
+    assert out.prompt_version == orchestrator.PROMPT_VERSION and out.models_used == ["gemini-3.6-flash"]

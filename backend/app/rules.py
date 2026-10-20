@@ -9,11 +9,13 @@ import unicodedata
 from decimal import Decimal
 from typing import Callable, Optional
 
+from .confidence import compute_confidence
 from .schemas import (
     Citation,
     CitationFailure,
     ClaimReport,
     ClaimVerdict,
+    ComponentStatus,
     ConsensusResult,
     FailedCitation,
     RankedEvidence,
@@ -30,8 +32,6 @@ CAP_SINGLE_SOURCE = 0.70
 CAP_CONFLICT = 0.60
 CAP_UNVERIFIABLE = 0.40
 
-# weights for final confidence (LLM self-report is only one input)
-W_LLM, W_AGREEMENT, W_CORROBORATION = 0.5, 0.3, 0.2
 
 
 # ------------------------------------------------------------ validator
@@ -299,7 +299,26 @@ def unverifiable_result(claim_id: str, notes: str) -> ConsensusResult:
     )
 
 
-def compute_consensus(verdict: ClaimVerdict, evidence: RankedEvidence) -> ConsensusResult:
+def _evidence_strength(verdict: ClaimVerdict, agreement: float, fc_score: float) -> float:
+    """Share of components settled (supported or contradicted) with a cited id. Without components,
+    fall back to citation agreement, so v1-style verdicts still get a score."""
+    comps = verdict.components
+    if not comps:
+        return 0.5 * agreement
+    cited = {c.evidence_id for c in verdict.citations}
+    settled = sum(c.status != ComponentStatus.UNKNOWN and bool(set(c.evidence_ids) & cited) for c in comps)
+    return max(settled / len(comps), fc_score)
+
+
+def compute_consensus(
+    verdict: ClaimVerdict,
+    evidence: RankedEvidence,
+    *,
+    quote_first_try: bool = True,
+    judge_agreement: float = 1.0,
+    fallback_used: bool = False,
+    factors: dict | None = None,
+) -> ConsensusResult:
     """Combine the validated LLM verdict with the best Fact Check rating.
 
     Call only with a verdict that passed validation. Rules:
@@ -308,6 +327,7 @@ def compute_consensus(verdict: ClaimVerdict, evidence: RankedEvidence) -> Consen
       - LLM UNVERIFIABLE, fact-check has a rating -> adopt it (single source)
       - no usable fact-check              -> keep LLM label, single source
       - nothing usable at all             -> UNVERIFIABLE
+    Confidence comes from confidence.compute_confidence; pass `factors` to receive its named inputs.
     """
     fc_label = _best_factcheck_label(evidence)
     cited_ids = {c.evidence_id for c in verdict.citations}
@@ -321,7 +341,12 @@ def compute_consensus(verdict: ClaimVerdict, evidence: RankedEvidence) -> Consen
 
     if label == VerdictLabel.UNVERIFIABLE and fc_label is None:
         res = unverifiable_result(verdict.claim_id, "No sufficient evidence from either source.")
-        res.final_confidence = min(verdict.confidence, CAP_UNVERIFIABLE)
+        value, named = compute_confidence(
+            evidence_strength=_evidence_strength(verdict, 0.0, 0.0), independent_sources=0, corroboration=0.5,
+            quote_first_try=quote_first_try, judge_agreement=judge_agreement, fallback_used=fallback_used)
+        res.final_confidence = min(value, CAP_UNVERIFIABLE)
+        if factors is not None:
+            factors.update(named)
         return res
 
     if fc_label is not None and fc_label != label:
@@ -343,9 +368,20 @@ def compute_consensus(verdict: ClaimVerdict, evidence: RankedEvidence) -> Consen
     else:
         corroboration = 0.5
 
-    confidence = (
-        W_LLM * verdict.confidence + W_AGREEMENT * agreement + W_CORROBORATION * corroboration
+    from .retrievers.dedupe import count_independent  # dedupe -> rerank imports this module
+
+    fc_score = max((f.match_score for f in evidence.factchecks if f.normalized_label == label
+                    and f.match_score >= FACTCHECK_MATCH_THRESHOLD), default=0.0)
+    confidence, named = compute_confidence(
+        evidence_strength=_evidence_strength(verdict, agreement, fc_score),
+        independent_sources=count_independent(evidence, cited_ids),
+        corroboration=corroboration,
+        quote_first_try=quote_first_try,
+        judge_agreement=judge_agreement,
+        fallback_used=fallback_used,
     )
+    if factors is not None:
+        factors.update(named)
     if single_source:
         confidence = min(confidence, CAP_SINGLE_SOURCE)
     if conflict:
