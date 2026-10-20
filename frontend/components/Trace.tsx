@@ -1,6 +1,10 @@
 import { STEP_NAME } from "@/lib/pipeline";
 import type { TraceLine } from "@/lib/reducer";
 
+const RETRY_NOTE: Record<string, string> = {
+  validate: "fixing a quote",
+  retrieve: "searching again with new queries",
+};
 const SR = { running: "Running", ok: "Done", failed: "Failed", retry: "Re-asking" } as const;
 
 function Mark({ state }: { state: TraceLine["state"] }) {
@@ -29,7 +33,7 @@ export default function Trace({ lines, running }: { lines: TraceLine[]; running:
               <span className="min-w-0">
                 <span className="font-medium text-ink">{STEP_NAME[l.step] ?? l.step}</span>
                 {l.claim_id && <span className="ml-1.5 rounded bg-rule/60 px-1 text-[0.65rem] text-muted">{l.claim_id}</span>}
-                {l.state === "retry" && <span className="ml-1 text-warn"> re-asking</span>}
+                {l.state === "retry" && <span className="ml-1 text-warn"> {RETRY_NOTE[l.step] ?? "trying again"}</span>}
                 {l.message && <span className="block break-words text-muted">{l.message}</span>}
               </span>
             </li>

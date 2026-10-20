@@ -64,6 +64,27 @@ def _quotable_texts(evidence: RankedEvidence) -> dict[str, tuple[str, list[str]]
     return out
 
 
+ELLIPSIS = re.compile(r"\.{3}|\u2026")
+MIN_FRAGMENT_CHARS = 12
+
+
+def _quote_in(quote: str, text: str) -> bool:
+    """True if quote is a verbatim substring of text. A quote joined with an ellipsis also passes when
+    every fragment is verbatim, at least MIN_FRAGMENT_CHARS long, and the fragments appear in order."""
+    if quote in text:
+        return True
+    parts = [p.strip() for p in ELLIPSIS.split(quote)]
+    if len(parts) < 2 or any(len(p) < MIN_FRAGMENT_CHARS for p in parts):
+        return False
+    pos = 0
+    for p in parts:
+        i = text.find(p, pos)
+        if i < 0:
+            return False
+        pos = i + len(p)
+    return True
+
+
 def validate_verdict(
     verdict: ClaimVerdict,
     evidence: RankedEvidence,
@@ -85,7 +106,7 @@ def validate_verdict(
             continue
         url, texts = sources[c.evidence_id]
         quote = _norm(c.quote)
-        if not quote or not any(quote in t for t in texts):
+        if not quote or not any(_quote_in(quote, t) for t in texts):
             failures.append(_fail(c, CitationFailure.QUOTE_NOT_FOUND))
             continue
         if link_is_alive is not None:

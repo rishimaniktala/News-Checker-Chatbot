@@ -43,9 +43,9 @@ def reconcile(verdict: ClaimVerdict, evidence: RankedEvidence) -> list[str]:
     for c in settled:
         if not c.evidence_ids:
             problems.append(f'component "{c.name}" is {c.status.value} but names no evidence id')
-        missing = [i for i in c.evidence_ids if i in valid and i not in cited]
-        if missing:
-            problems.append(f'component "{c.name}" relies on {", ".join(missing)}, which has no citation')
+        known = [i for i in c.evidence_ids if i in valid]
+        if known and not set(known) & cited:
+            problems.append(f'component "{c.name}" relies on {", ".join(known)}, which has no citation')
     if verdict.label in (VerdictLabel.TRUE, VerdictLabel.FALSE) and not settled:
         problems.append(f"label {verdict.label.value} has no supported or contradicted component behind it")
     wanted = {VerdictLabel.TRUE: Stance.SUPPORTS, VerdictLabel.FALSE: Stance.REFUTES}.get(verdict.label)

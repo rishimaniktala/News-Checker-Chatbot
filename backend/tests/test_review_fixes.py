@@ -208,3 +208,33 @@ def test_missing_fact_check_publisher_falls_back_to_the_site_name():
     finally:
         del os.environ["FACTCHECK_API_KEY"]
     assert item["publisher"] == "misbar.com"
+
+
+def test_ellipsis_joined_quote_passes_when_every_fragment_is_verbatim_and_in_order():
+    from app.rules import validate_verdict
+
+    ev = _evidence()
+    ev.guardian[0].passage = "The Ukraine invasion of 2022 has led both Finland and Sweden to abandon decades of military non-alignment."
+    ok = _verdict("r")
+    ok.citations = [Citation(evidence_id="E1", quote="The Ukraine invasion... has led both Finland and Sweden to abandon decades of military", stance=Stance.REFUTES)]
+    assert validate_verdict(ok, ev, 1).passed
+    out_of_order = _verdict("r")
+    out_of_order.citations = [Citation(evidence_id="E1", quote="Finland and Sweden to abandon... The Ukraine invasion of 2022", stance=Stance.REFUTES)]
+    assert not validate_verdict(out_of_order, ev, 1).passed
+    invented = _verdict("r")
+    invented.citations = [Citation(evidence_id="E1", quote="The Ukraine invasion... caused Sweden to join in March", stance=Stance.REFUTES)]
+    assert not validate_verdict(invented, ev, 1).passed
+    tiny = _verdict("r")
+    tiny.citations = [Citation(evidence_id="E1", quote="The... Sweden", stance=Stance.REFUTES)]
+    assert not validate_verdict(tiny, ev, 1).passed
+
+
+def test_component_with_one_cited_id_out_of_two_is_not_a_reconcile_problem():
+    from app.judge import reconcile
+    from app.schemas import ComponentCheck, ComponentStatus
+
+    ev = _evidence()
+    ev.guardian.append(EvidenceItem(id="E2", url="https://www.theguardian.com/b", title="B", passage="p", rerank_score=0.5))
+    v = _verdict("r")
+    v.components = [ComponentCheck(name="part", status=ComponentStatus.CONTRADICTED, evidence_ids=["E1", "E2"])]
+    assert reconcile(v, ev) == []
